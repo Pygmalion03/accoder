@@ -7,8 +7,12 @@ export function shellQuote(value) {
   return `'${String(value).replace(/'/g, `'\"'\"'`)}'`;
 }
 
+function normalizeContainerPath(value) {
+  return String(value).replace(/\\/g, "/");
+}
+
 export function buildShellCommand(commandSpec) {
-  return [commandSpec.command, ...commandSpec.args].map(shellQuote).join(" ");
+  return [commandSpec.command, ...commandSpec.args].map(normalizeContainerPath).map(shellQuote).join(" ");
 }
 
 export function buildDockerArgs({ hostWorkdir, commandSpec, image = DOCKER_IMAGE }) {

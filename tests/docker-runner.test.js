@@ -42,6 +42,18 @@ test("builds docker run arguments with resource limits and stdin", () => {
   assert.equal(args.at(-1), "'python' '/workspace/main.py'");
 });
 
+test("normalizes Windows-style workspace paths for the Linux container", () => {
+  const args = buildDockerArgs({
+    hostWorkdir: "E:\\Projects\\acmcoder\\tmp",
+    commandSpec: {
+      command: "\\workspace\\main.exe",
+      args: [],
+    },
+  });
+
+  assert.equal(args.at(-1), "'/workspace/main.exe'");
+});
+
 test("classifies missing docker command as unavailable runner", () => {
   const result = classifyDockerUnavailable({
     failedToStart: true,
@@ -85,4 +97,5 @@ test("repository includes a local docker runner image definition", () => {
   assert.match(dockerfile, /openjdk|jdk/i);
   assert.match(dockerfile, /g\+\+/);
   assert.match(dockerfile, /python3/);
+  assert.match(dockerfile, /\/usr\/local\/bin\/python/);
 });
