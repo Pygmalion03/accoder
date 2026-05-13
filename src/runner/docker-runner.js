@@ -45,7 +45,7 @@ export function classifyDockerUnavailable(result) {
 
   const stderr = result.stderr || "";
 
-  if (/Cannot connect to the Docker daemon|docker daemon is not running|error during connect/i.test(stderr)) {
+  if (/Cannot connect to the Docker daemon|docker daemon is not running|error during connect|failed to connect to the docker API/i.test(stderr)) {
     return {
       status: "NO_RUNNER",
       message: "Docker daemon is not running. Start Docker Desktop and try again.",

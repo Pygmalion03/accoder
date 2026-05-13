@@ -62,6 +62,17 @@ test("classifies missing local image as unavailable runner", () => {
   assert.match(result.message, /docker build -t acmcoder-runner:local ./);
 });
 
+test("classifies stopped Docker Desktop daemon on Windows as unavailable runner", () => {
+  const result = classifyDockerUnavailable({
+    code: 1,
+    stderr:
+      "ERROR: failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; check if the path is correct and if the daemon is running",
+  });
+
+  assert.equal(result.status, "NO_RUNNER");
+  assert.match(result.message, /Docker daemon is not running/);
+});
+
 test("docker runner resolves paths inside the workspace", () => {
   assert.equal(dockerRunner.resolveSourceFile({ toolchain: { entryFile: "main.py" } }), "/workspace/main.py");
   assert.equal(dockerRunner.resolveWorkdir(), "/workspace");
