@@ -1,77 +1,12 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { spawn } from "node:child_process";
 
 import { compareOutput } from "../core/output.js";
 import { findProblem, resolveProjectPath } from "../core/problems.js";
-import { decodeProcessOutput } from "./encoding.js";
+import { DEFAULT_TIMEOUT_MS } from "./process.js";
+import { getRunner } from "./runners.js";
 import { getToolchain } from "./toolchains.js";
-
-const DEFAULT_TIMEOUT_MS = 3000;
-
-function runProcess(command, args, options = {}) {
-  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-
-  return new Promise((resolve) => {
-    const child = spawn(command, args, {
-      cwd: options.cwd,
-      windowsHide: true,
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-
-    const stdoutChunks = [];
-    const stderrChunks = [];
-    let settled = false;
-
-    const buildResult = (extra = {}) => ({
-      code: null,
-      stdout: decodeProcessOutput(stdoutChunks),
-      stderr: decodeProcessOutput(stderrChunks),
-      timedOut: false,
-      ...extra,
-    });
-
-    const timer = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      child.kill("SIGKILL");
-      resolve(buildResult({ timedOut: true }));
-    }, timeoutMs);
-
-    child.stdout.on("data", (chunk) => {
-      stdoutChunks.push(chunk);
-    });
-
-    child.stderr.on("data", (chunk) => {
-      stderrChunks.push(chunk);
-    });
-
-    child.once("error", (error) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      resolve({
-        ...buildResult({
-        stderr: error.message,
-        failedToStart: true,
-        }),
-      });
-    });
-
-    child.once("close", (code) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      resolve(buildResult({
-        code,
-        timedOut: false,
-      }));
-    });
-
-    child.stdin.end(options.stdin ?? "");
-  });
-}
 
 async function prepareSource({ toolchain, file, code, workdir }) {
   const sourceFile = path.join(workdir, toolchain.entryFile);
@@ -91,6 +26,7 @@ async function prepareSource({ toolchain, file, code, workdir }) {
 
 export async function runSubmission(options) {
   const toolchain = getToolchain(options.language);
+  const runner = getRunner(options.runner);
   const workdir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-"));
 
   try {
@@ -100,13 +36,25 @@ export async function runSubmission(options) {
       code: options.code,
       workdir,
     });
+    const executionSourceFile = runner.resolveSourceFile({ sourceFile, workdir, toolchain });
+    const executionWorkdir = runner.resolveWorkdir({ sourceFile, workdir, toolchain });
 
     if (toolchain.compile) {
-      const compileCommand = toolchain.compile({ sourceFile, workdir });
-      const compileResult = await runProcess(compileCommand.command, compileCommand.args, {
-        cwd: workdir,
+      const compileCommand = toolchain.compile({ sourceFile: executionSourceFile, workdir: executionWorkdir });
+      const compileResult = await runner.execute(compileCommand, {
+        hostWorkdir: workdir,
+        stdin: "",
         timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
       });
+
+      if (compileResult.runnerUnavailable) {
+        return {
+          status: "NO_RUNNER",
+          message: compileResult.message,
+          stdout: compileResult.stdout,
+          stderr: compileResult.stderr,
+        };
+      }
 
       if (compileResult.failedToStart) {
         return {
@@ -136,12 +84,21 @@ export async function runSubmission(options) {
       }
     }
 
-    const runCommand = toolchain.run({ sourceFile, workdir });
-    const runResult = await runProcess(runCommand.command, runCommand.args, {
-      cwd: workdir,
+    const runCommand = toolchain.run({ sourceFile: executionSourceFile, workdir: executionWorkdir });
+    const runResult = await runner.execute(runCommand, {
+      hostWorkdir: workdir,
       stdin: options.stdin ?? "",
       timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     });
+
+    if (runResult.runnerUnavailable) {
+      return {
+        status: "NO_RUNNER",
+        message: runResult.message,
+        stdout: runResult.stdout,
+        stderr: runResult.stderr,
+      };
+    }
 
     if (runResult.failedToStart) {
       return {
@@ -190,7 +147,7 @@ export async function runSubmission(options) {
   }
 }
 
-export async function runProblemCases({ slug, language, file, code, timeoutMs }) {
+export async function runProblemCases({ slug, language, file, code, runner, timeoutMs }) {
   const problem = findProblem(slug);
   const results = [];
 
@@ -203,6 +160,7 @@ export async function runProblemCases({ slug, language, file, code, timeoutMs })
       code,
       stdin,
       expected,
+      runner,
       timeoutMs,
     });
 

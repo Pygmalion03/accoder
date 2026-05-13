@@ -77,3 +77,17 @@ test("web editor renders line numbers next to code", () => {
   assert.match(script, /lineNumbers:\s*document\.querySelector\("#line-numbers"\)/);
   assert.match(script, /syncLineNumbers/);
 });
+
+test("web UI exposes local and docker runner modes", () => {
+  const html = fs.readFileSync("web/index.html", "utf8");
+  const script = fs.readFileSync("web/app.js", "utf8");
+  const css = fs.readFileSync("web/styles.css", "utf8");
+
+  assert.match(html, /id="runner"/);
+  assert.match(html, /value="local"/);
+  assert.match(html, /value="docker"/);
+  assert.match(script, /runner:\s*document\.querySelector\("#runner"\)/);
+  assert.match(script, /runner:\s*elements\.runner\.value/);
+  assert.match(script, /acmcoder\.web\.runner/);
+  assert.match(css, /\.status\.NO_RUNNER/);
+});

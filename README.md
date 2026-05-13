@@ -38,14 +38,30 @@ npm start
 http://127.0.0.1:43117
 ```
 
+## Docker runner
+
+如果本机没有 Java、C++ 或 Python 工具链，但已经安装 Docker，可以先构建本地 runner 镜像：
+
+```bash
+docker build -t acmcoder-runner:local .
+```
+
+然后在 CLI 中显式选择 Docker：
+
+```bash
+node bin/acmcoder.js test two-sum --lang python --file problems/two-sum/templates/main.py --runner docker
+```
+
+Web 页面也可以在运行模式里选择 Docker。Docker 模式会禁用容器网络，并限制 CPU、内存和进程数量。
+
 ## CLI
 
 ```bash
 node bin/acmcoder.js list
 node bin/acmcoder.js show <slug-or-id>
 node bin/acmcoder.js doctor
-node bin/acmcoder.js test <slug> --lang <java|cpp|python> --file <path>
-node bin/acmcoder.js run <slug> --lang <java|cpp|python> --file <path> --input <path> [--expected <path>]
+node bin/acmcoder.js test <slug> --lang <java|cpp|python> --file <path> [--runner <local|docker>]
+node bin/acmcoder.js run <slug> --lang <java|cpp|python> --file <path> --input <path> [--expected <path>] [--runner <local|docker>]
 node bin/acmcoder.js serve [--port 43117]
 ```
 
