@@ -1,32 +1,11 @@
+import { dockerRunner } from "./docker-runner.js";
 import { localRunner } from "./local-runner.js";
-
-const dockerRunnerPlaceholder = {
-  name: "docker",
-
-  resolveSourceFile({ toolchain }) {
-    return `/workspace/${toolchain.entryFile}`;
-  },
-
-  resolveWorkdir() {
-    return "/workspace";
-  },
-
-  async execute() {
-    return {
-      status: "NO_RUNNER",
-      runnerUnavailable: true,
-      message: "Docker runner is not implemented yet.",
-      stdout: "",
-      stderr: "",
-    };
-  },
-};
 
 export const DEFAULT_RUNNER = "local";
 
 const runners = {
   local: localRunner,
-  docker: dockerRunnerPlaceholder,
+  docker: dockerRunner,
 };
 
 export function normalizeRunner(value) {
