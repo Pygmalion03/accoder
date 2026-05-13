@@ -5,3 +5,4 @@ dist/
 coverage/
 data/memory/
 .playwright-mcp/
+.worktrees/
