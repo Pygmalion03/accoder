@@ -7,6 +7,7 @@ const state = {
 const CACHE_KEYS = {
   selected: "acmcoder.web.selected",
   language: "acmcoder.web.language",
+  runner: "acmcoder.web.runner",
 };
 
 const GENERIC_TEMPLATES = {
@@ -61,6 +62,7 @@ const elements = {
   link: document.querySelector("#leetcode-link"),
   description: document.querySelector("#problem-description"),
   language: document.querySelector("#language"),
+  runner: document.querySelector("#runner"),
   loadTemplate: document.querySelector("#load-template"),
   run: document.querySelector("#run"),
   lineNumbers: document.querySelector("#line-numbers"),
@@ -534,7 +536,7 @@ function setResult(result) {
 async function runCode() {
   elements.status.className = "status";
   elements.status.textContent = "RUNNING";
-  elements.message.textContent = "Running local toolchain...";
+  elements.message.textContent = `Running ${elements.runner.value} runner...`;
   elements.stdout.textContent = "";
   elements.stderr.textContent = "";
 
@@ -547,6 +549,7 @@ async function runCode() {
       body: JSON.stringify({
         slug: state.selected.slug,
         language: elements.language.value,
+        runner: elements.runner.value,
         code: elements.code.value,
         stdin: elements.stdin.value,
         expected: elements.expected.value,
@@ -584,12 +587,16 @@ async function init() {
   const body = await getJson("/api/problems");
   state.problems = body.problems;
   elements.language.value = localStorage.getItem(CACHE_KEYS.language) || elements.language.value;
+  elements.runner.value = localStorage.getItem(CACHE_KEYS.runner) || elements.runner.value;
   elements.search.addEventListener("input", renderProblemList);
   elements.language.addEventListener("change", async () => {
     localStorage.setItem(CACHE_KEYS.language, elements.language.value);
     if (!restoreWorkspaceCache()) {
       await loadTemplate();
     }
+  });
+  elements.runner.addEventListener("change", () => {
+    localStorage.setItem(CACHE_KEYS.runner, elements.runner.value);
   });
   elements.loadTemplate.addEventListener("click", loadTemplate);
   elements.sampleIo.addEventListener("click", () => {

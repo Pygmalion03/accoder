@@ -221,7 +221,7 @@ button:hover,
 
 .toolbar {
   display: grid;
-  grid-template-columns: minmax(130px, 1fr) auto auto;
+  grid-template-columns: minmax(120px, 0.8fr) minmax(120px, 0.8fr) auto auto;
   gap: 10px;
   align-items: end;
 }
@@ -390,7 +390,8 @@ textarea {
 .status.RE,
 .status.CE,
 .status.TLE,
-.status.NO_TOOLCHAIN {
+.status.NO_TOOLCHAIN,
+.status.NO_RUNNER {
   background: #f3d8d8;
   color: var(--bad);
 }
