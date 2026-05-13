@@ -4,7 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { findProblem, loadProblems, projectRoot, resolveProjectPath } from "../core/problems.js";
-import { runSubmission } from "../runner/run.js";
+import { runSubmission as defaultRunSubmission } from "../runner/run.js";
 import {
   getDefaultCurrentMemoryFile,
   getDefaultMemoryFile,
@@ -104,6 +104,7 @@ async function serveStatic(requestUrl, response) {
 export function createAcmcoderServer(options = {}) {
   const memoryFile = options.memoryFile || getDefaultMemoryFile();
   const currentMemoryFile = options.currentMemoryFile || getDefaultCurrentMemoryFile();
+  const runSubmission = options.runSubmission || defaultRunSubmission;
 
   return http.createServer(async (request, response) => {
     const requestUrl = new URL(request.url, "http://127.0.0.1");
@@ -142,6 +143,7 @@ export function createAcmcoderServer(options = {}) {
           stdin: body.stdin,
           expected: body.expected,
           timeoutMs: body.timeoutMs,
+          runner: body.runner,
         });
         sendJson(response, 200, { result });
         return;

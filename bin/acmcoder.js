@@ -14,8 +14,8 @@ Usage:
   node bin/acmcoder.js list
   node bin/acmcoder.js show <slug-or-id>
   node bin/acmcoder.js doctor
-  node bin/acmcoder.js test <slug> --lang <java|cpp|python> --file <path>
-  node bin/acmcoder.js run <slug> --lang <java|cpp|python> --file <path> --input <path> [--expected <path>]
+  node bin/acmcoder.js test <slug> --lang <java|cpp|python> --file <path> [--runner <local|docker>]
+  node bin/acmcoder.js run <slug> --lang <java|cpp|python> --file <path> --input <path> [--expected <path>] [--runner <local|docker>]
   node bin/acmcoder.js serve [--port 43117]
 `);
 }
@@ -88,7 +88,7 @@ async function main() {
     if (!slug) throw new Error("Usage: test <slug> --lang <lang> --file <path>");
     const language = requireOption(parsed.options, "lang");
     const file = requireOption(parsed.options, "file");
-    const results = await runProblemCases({ slug, language, file });
+    const results = await runProblemCases({ slug, language, file, runner: parsed.options.runner });
 
     for (const result of results) {
       console.log(`case ${result.index} (${result.name}): ${result.status} - ${result.message}`);
@@ -109,10 +109,10 @@ async function main() {
     const file = requireOption(parsed.options, "file");
     const stdin = await fs.readFile(requireOption(parsed.options, "input"), "utf8");
     const expected = parsed.options.expected ? await fs.readFile(parsed.options.expected, "utf8") : undefined;
-    const result = await runSubmission({ language, file, stdin, expected });
+    const result = await runSubmission({ language, file, stdin, expected, runner: parsed.options.runner });
 
     printRunResult(result);
-    if (["WA", "RE", "CE", "TLE", "NO_TOOLCHAIN"].includes(result.status)) {
+    if (["WA", "RE", "CE", "TLE", "NO_TOOLCHAIN", "NO_RUNNER"].includes(result.status)) {
       process.exitCode = 1;
     }
     return;

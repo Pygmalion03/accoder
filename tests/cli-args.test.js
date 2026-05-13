@@ -25,3 +25,15 @@ test("parses test command options", () => {
 test("rejects options without values", () => {
   assert.throws(() => parseCliArgs(["test", "two-sum", "--lang"]), /Missing value/);
 });
+
+test("parses optional runner mode", () => {
+  assert.deepEqual(parseCliArgs(["test", "two-sum", "--lang", "python", "--file", "main.py", "--runner", "docker"]), {
+    command: "test",
+    positional: ["two-sum"],
+    options: {
+      lang: "python",
+      file: "main.py",
+      runner: "docker",
+    },
+  });
+});

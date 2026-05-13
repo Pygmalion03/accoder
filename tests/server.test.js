@@ -131,3 +131,40 @@ test("exposes memory storage location for the extension sidebar", async () => {
     server.close();
   }
 });
+
+test("passes runner mode from run API into the runner layer", async () => {
+  const calls = [];
+  const server = createAcmcoderServer({
+    runSubmission: async (options) => {
+      calls.push(options);
+      return {
+        status: "UNKNOWN",
+        message: "captured",
+        stdout: "",
+        stderr: "",
+      };
+    },
+  });
+  const port = await listen(server);
+
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/run`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        language: "python",
+        code: "print(1)",
+        stdin: "",
+        expected: "",
+        runner: "docker",
+      }),
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.result.message, "captured");
+    assert.equal(calls[0].runner, "docker");
+  } finally {
+    server.close();
+  }
+});
