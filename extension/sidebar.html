@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ACMCoder Runner</title>
+    <link rel="stylesheet" href="sidebar.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="mark">A</div>
+        <div>
+          <h1>ACMCoder</h1>
+          <p>LeetCode 侧栏练习</p>
+        </div>
+      </header>
+
+      <section class="capture-strip">
+        <div class="capture-row">
+          <label class="switch-row">
+            <input id="memory-mode" type="checkbox" />
+            <span>记忆模式</span>
+          </label>
+          <span id="slug" class="mono">未读取</span>
+        </div>
+        <div class="current-problem">
+          <strong id="title">-</strong>
+          <span id="tags" class="tags"></span>
+        </div>
+        <div class="button-row">
+          <button id="capture" type="button">读取当前题目</button>
+          <button id="save" type="button" class="secondary">记忆到本地</button>
+          <button id="open-local" type="button" class="secondary">打开本地页</button>
+        </div>
+        <p id="status" class="status">等待读取 LeetCode 题目页。</p>
+      </section>
+
+      <section class="practice-panel">
+        <div class="toolbar">
+          <label>
+            语言
+            <select id="language">
+              <option value="python">Python</option>
+              <option value="java">Java</option>
+              <option value="cpp">C++17</option>
+            </select>
+          </label>
+          <button id="reset-code" type="button" class="secondary">还原初始代码</button>
+          <button id="run-code" type="button">Run</button>
+        </div>
+
+        <label class="field-label" for="code">代码</label>
+        <div class="code-editor" id="code-editor">
+          <div id="line-numbers" class="line-numbers" aria-hidden="true">1</div>
+          <div class="code-scroll">
+            <pre id="code-highlight" aria-hidden="true"><code></code></pre>
+            <textarea id="code" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea>
+          </div>
+        </div>
+
+        <div class="io-head">
+          <h2>自测输入</h2>
+          <button id="sample-io" type="button" class="secondary">题目样例</button>
+        </div>
+        <div class="io-grid">
+          <label>
+            stdin
+            <textarea id="stdin" spellcheck="false"></textarea>
+          </label>
+          <label>
+            自测预期输出（可选）
+            <textarea id="expected" spellcheck="false"></textarea>
+          </label>
+        </div>
+
+        <div class="result-head">
+          <h2>运行结果</h2>
+          <span id="run-status" class="run-status">IDLE</span>
+        </div>
+        <pre id="message"></pre>
+        <h3>stdout</h3>
+        <pre id="stdout"></pre>
+        <h3>stderr</h3>
+        <pre id="stderr"></pre>
+      </section>
+
+      <details class="settings">
+        <summary>本地设置</summary>
+        <label>
+          LLM API Key
+          <input id="llm-key" type="password" placeholder="仅保存到浏览器本地" />
+        </label>
+        <button id="save-key" type="button" class="secondary">保存 Key</button>
+        <p class="hint">当前运行器不依赖 LLM；后面生成 ACM 包装时再使用。</p>
+        <p class="label">本地记忆文件</p>
+        <p id="memory-file" class="mono">连接本地服务后显示</p>
+      </details>
+    </main>
+    <script src="sidebar.js"></script>
+  </body>
+</html>

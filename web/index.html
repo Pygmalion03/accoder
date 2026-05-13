@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ACMCoder</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23191b1f'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='32' font-family='Arial' font-weight='700' fill='white'%3EA%3C/text%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">A</div>
+          <div>
+            <h1>ACMCoder</h1>
+            <p>LeetCode 题目的本地 ACM 练习器</p>
+          </div>
+        </div>
+        <label class="search">
+          <span>搜索</span>
+          <input id="search" type="search" placeholder="slug / 题号 / 标签" />
+        </label>
+        <div id="problem-list" class="problem-list"></div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <p id="eyebrow" class="eyebrow">Local Runner</p>
+            <h2 id="problem-title">加载中</h2>
+          </div>
+          <a id="leetcode-link" class="link-button" href="#" target="_blank" rel="noreferrer">LeetCode</a>
+        </header>
+
+        <div class="content-grid">
+          <div class="left-stack">
+            <section class="problem-panel">
+              <h3>题目描述</h3>
+              <p id="problem-description"></p>
+            </section>
+
+            <section class="io-panel">
+              <div class="io-head">
+                <h3>自测输入</h3>
+                <div class="io-actions">
+                  <button id="sample-io" type="button">题目样例</button>
+                  <button id="clear-expected" type="button">只看输出</button>
+                </div>
+              </div>
+              <label>
+                标准输入 stdin
+                <textarea id="stdin" spellcheck="false"></textarea>
+              </label>
+              <label>
+                自测预期输出（可选）
+                <textarea id="expected" spellcheck="false"></textarea>
+              </label>
+              <p class="hint">留空时只展示 stdout；填写后按 stdout 文本比对。</p>
+            </section>
+          </div>
+
+          <div class="right-stack">
+            <section class="runner-panel">
+              <div class="toolbar">
+                <label>
+                  语言
+                  <select id="language">
+                    <option value="python">Python</option>
+                    <option value="java">Java</option>
+                    <option value="cpp">C++17</option>
+                  </select>
+                </label>
+                <button id="load-template" type="button">还原初始代码</button>
+                <button id="run" type="button">Run</button>
+              </div>
+              <label class="editor-label" for="code">代码</label>
+              <div class="code-editor" id="code-editor">
+                <div id="line-numbers" class="line-numbers" aria-hidden="true">1</div>
+                <div class="code-scroll">
+                  <pre id="code-highlight" aria-hidden="true"><code></code></pre>
+                  <textarea id="code" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea>
+                </div>
+              </div>
+            </section>
+
+            <section class="result-panel">
+              <div class="result-head">
+                <h3>运行结果</h3>
+                <span id="status" class="status">IDLE</span>
+              </div>
+              <pre id="message"></pre>
+              <h4>自测输出 stdout</h4>
+              <pre id="stdout"></pre>
+              <h4>stderr</h4>
+              <pre id="stderr"></pre>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

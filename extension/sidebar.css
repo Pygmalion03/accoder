@@ -1,0 +1,421 @@
+:root {
+  color-scheme: light;
+  --bg: #f5f3ee;
+  --surface: #fffefa;
+  --ink: #191b1f;
+  --muted: #66707d;
+  --line: #d8d2c8;
+  --accent: #176b5b;
+  --accent-strong: #0e4d41;
+  --good: #12613f;
+  --bad: #9b1c31;
+  --code: #101419;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--bg);
+  color: var(--ink);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+main {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 0 4px;
+}
+
+.mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 800;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 19px;
+  line-height: 1.1;
+}
+
+h2 {
+  font-size: 17px;
+}
+
+h3 {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+header p,
+.hint,
+.label,
+.mono,
+label {
+  color: var(--muted);
+}
+
+.capture-strip,
+.practice-panel,
+.settings {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.capture-strip,
+.practice-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.capture-row,
+.button-row,
+.io-head,
+.result-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.capture-row,
+.io-head,
+.result-head {
+  justify-content: space-between;
+}
+
+.switch-row {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.switch-row input {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.switch-row span {
+  white-space: nowrap;
+}
+
+.current-problem {
+  display: grid;
+  gap: 5px;
+}
+
+.current-problem strong {
+  overflow: hidden;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.tags span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #f4f1ea;
+  color: #4b5562;
+  padding: 2px 7px;
+  font-size: 12px;
+}
+
+.button-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+button {
+  min-height: 36px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  padding: 7px 9px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+button:hover {
+  background: var(--accent-strong);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+button.secondary {
+  background: transparent;
+  color: var(--accent);
+}
+
+button.secondary:hover {
+  background: #e6f0eb;
+}
+
+select,
+input,
+textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+}
+
+select,
+input {
+  height: 36px;
+  padding: 0 9px;
+}
+
+label,
+.field-label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(108px, 1fr) auto auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.code-editor {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  overflow: hidden;
+  height: 300px;
+  min-height: 220px;
+  border: 1px solid #252b33;
+  border-radius: 6px;
+  background: var(--code);
+  resize: vertical;
+}
+
+.code-scroll {
+  position: relative;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+}
+
+#code,
+#code-highlight,
+.line-numbers {
+  margin: 0;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  letter-spacing: 0;
+  tab-size: 4;
+  white-space: pre;
+}
+
+.line-numbers {
+  overflow: hidden;
+  min-width: 42px;
+  border-right: 1px solid #252b33;
+  background: #0b0f14;
+  color: #687381;
+  padding: 12px 9px 12px 8px;
+  text-align: right;
+  user-select: none;
+}
+
+#code-highlight {
+  display: none;
+}
+
+#code-highlight code {
+  display: block;
+  min-width: max-content;
+}
+
+#code {
+  display: block;
+  width: 100%;
+  min-width: 100%;
+  padding: 12px;
+  resize: none;
+  overflow: auto;
+  background: transparent;
+  color: #d8dee9;
+  caret-color: #f8fafc;
+  outline: none;
+  appearance: none;
+}
+
+#code::selection {
+  background: rgba(78, 132, 196, 0.45);
+  color: #f8fafc;
+}
+
+.tok-keyword {
+  color: #82aaff;
+}
+
+.tok-string {
+  color: #c3e88d;
+}
+
+.tok-comment {
+  color: #7f8c98;
+}
+
+.tok-number {
+  color: #f78c6c;
+}
+
+.tok-type {
+  color: #89ddff;
+}
+
+.io-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.io-grid textarea {
+  min-height: 96px;
+  resize: vertical;
+  padding: 10px;
+  line-height: 1.45;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+}
+
+pre {
+  overflow: auto;
+  min-height: 32px;
+  max-height: 180px;
+  margin: 0;
+  border-radius: 6px;
+  background: #171b21;
+  color: #f7f4ed;
+  padding: 10px;
+  white-space: pre-wrap;
+}
+
+.status {
+  border-left: 3px solid var(--line);
+  padding-left: 8px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.status.ok {
+  border-left-color: var(--good);
+  color: var(--good);
+}
+
+.status.error {
+  border-left-color: var(--bad);
+  color: var(--bad);
+}
+
+.run-status {
+  border-radius: 999px;
+  background: #ddd7cc;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.run-status.AC,
+.run-status.ok {
+  background: #d7eadf;
+  color: var(--good);
+}
+
+.run-status.WA,
+.run-status.RE,
+.run-status.CE,
+.run-status.TLE,
+.run-status.NO_TOOLCHAIN,
+.run-status.error {
+  background: #f3d8d8;
+  color: var(--bad);
+}
+
+.settings {
+  display: grid;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.settings summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.settings[open] {
+  padding-bottom: 12px;
+}
+
+.hint {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.label {
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.mono {
+  overflow-wrap: anywhere;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+}
+
+@media (max-width: 420px) {
+  .button-row,
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+}

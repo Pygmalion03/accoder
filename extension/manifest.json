@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "ACMCoder",
+  "version": "0.1.0",
+  "description": "Capture LeetCode problem text into the local ACMCoder memory store.",
+  "permissions": ["activeTab", "scripting", "sidePanel", "storage", "tabs"],
+  "host_permissions": [
+    "https://leetcode.cn/*",
+    "https://leetcode.com/*",
+    "http://127.0.0.1:43117/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "ACMCoder"
+  },
+  "side_panel": {
+    "default_path": "sidebar.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://leetcode.cn/problems/*", "https://leetcode.com/problems/*"],
+      "js": ["content-script.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
