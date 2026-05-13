@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 
 import {
   buildDockerArgs,
@@ -64,4 +65,13 @@ test("classifies missing local image as unavailable runner", () => {
 test("docker runner resolves paths inside the workspace", () => {
   assert.equal(dockerRunner.resolveSourceFile({ toolchain: { entryFile: "main.py" } }), "/workspace/main.py");
   assert.equal(dockerRunner.resolveWorkdir(), "/workspace");
+});
+
+test("repository includes a local docker runner image definition", () => {
+  const dockerfile = fs.readFileSync("Dockerfile", "utf8");
+
+  assert.match(dockerfile, /FROM/);
+  assert.match(dockerfile, /openjdk|jdk/i);
+  assert.match(dockerfile, /g\+\+/);
+  assert.match(dockerfile, /python3/);
 });
