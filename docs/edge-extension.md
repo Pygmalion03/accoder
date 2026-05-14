@@ -24,7 +24,7 @@ npm start
 
 如果刚重新加载过扩展，第一次读取时可能遇到 `Could not establish connection. Receiving end does not exist.`。当前版本会自动注入 content script 并重试；如果仍失败，刷新一次 LeetCode 题目页再读。
 
-侧栏只会在用户主动打开过的 LeetCode 题目页 tab 上启用。切到普通网页 tab 时不会把 ACMCoder 侧栏继续带过去；切回之前打开过侧栏的题目 tab 时，扩展会按该 tab 的状态重新启用并尝试打开侧栏。这个状态保存在浏览器本地存储里以兼容不同 Edge 版本，关闭 tab 后会清理对应记录。
+侧栏只会在用户主动打开过的 LeetCode 题目页 tab 上启用。切到普通网页 tab 时不会把 ACMCoder 侧栏继续带过去；切回之前打开过侧栏的题目 tab 时，扩展会按该 tab 的状态重新启用侧栏，但打开动作仍由用户点击扩展图标触发。这个状态保存在浏览器本地存储里以兼容不同 Edge 版本，关闭 tab 后会清理对应记录。
 
 ## 当前侧栏
 

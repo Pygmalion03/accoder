@@ -84,10 +84,7 @@ async function updateSidePanelForTab(tabId, url = "") {
 
 async function restoreSidePanelForTab(tabId, url = "") {
   await syncOpenedTabsFromStorage();
-  const shouldOpen = await updateSidePanelForTab(tabId, url);
-  if (shouldOpen && chrome.sidePanel?.open) {
-    await chrome.sidePanel.open({ tabId }).catch(() => {});
-  }
+  await updateSidePanelForTab(tabId, url);
 }
 
 async function openLocalAcmcoderTab() {

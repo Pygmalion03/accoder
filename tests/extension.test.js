@@ -36,7 +36,8 @@ test("background hides the panel on other tabs and restores tabs that opened it"
   assert.match(script, /chrome\.sidePanel\.open\(\{\s*tabId/);
   assert.match(script, /const shouldOpen = isLeetCodeProblemUrl\(url\) && openedTabs\.has\(tabId\)/);
   assert.match(script, /enabled:\s*shouldOpen/);
-  assert.match(script, /if \(shouldOpen && chrome\.sidePanel\?\.open\)/);
+  assert.doesNotMatch(script, /if \(shouldOpen && chrome\.sidePanel\?\.open\)/);
+  assert.doesNotMatch(script, /restoreSidePanelForTab[\s\S]*chrome\.sidePanel\.open\(\{\s*tabId\s*\}/);
   assert.match(script, /chrome\.tabs\.create\(\{\s*url:\s*LOCAL_BASE/);
   assert.match(script, /setDefaultSidePanelClosed/);
   assert.match(script, /chrome\.runtime\.onInstalled\.addListener/);
