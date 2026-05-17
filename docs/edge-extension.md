@@ -35,7 +35,7 @@ npm start
 - 语言选择：Python、Java、C++17。
 - 代码区：基础高亮、Tab 缩进、括号/引号补齐、回车缩进。
 - 自测输入：`stdin` 和可选的预期输出。
-- 本地运行：调用 `POST http://127.0.0.1:43117/api/run`，展示 `stdout`、`stderr` 和 AC/WA/RE/CE 等状态。
+- 本地运行：调用 `POST http://127.0.0.1:43117/api/run`，可选择 Local 或 Docker runner，展示 `stdout`、`stderr` 和 AC/WA/RE/CE 等状态。Docker runner 缺少本地镜像时会自动构建 `acmcoder-runner:local`，除非设置了 `ACMCODER_DOCKER_AUTO_BUILD=0`。
 - 缓存：侧栏关闭或切页后，最近题目、代码、输入和预期输出会尽量恢复。
 
 保存后，本地 ACMCoder Web 页面会轮询 `/api/memory/current` 并自动加载最新题目。

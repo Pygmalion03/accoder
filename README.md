@@ -40,13 +40,13 @@ http://127.0.0.1:43117
 
 ## Docker runner
 
-如果本机没有 Java、C++ 或 Python 工具链，但已经安装 Docker，可以先构建本地 runner 镜像：
+如果本机没有 Java、C++ 或 Python 工具链，但已经安装 Docker，可以直接选择 Docker runner。首次 Docker 运行会自动检查 `acmcoder-runner:local` 镜像；如果镜像不存在，会自动在项目根目录执行等价的构建命令：
 
 ```bash
 docker build -t acmcoder-runner:local .
 ```
 
-默认镜像名是 `acmcoder-runner:local`。如果你要换成自己的镜像名，可以设置 `ACMCODER_DOCKER_IMAGE`：
+默认镜像名是 `acmcoder-runner:local`。如果你想提前构建，也可以手动运行上面的命令。如果你要换成自己的镜像名，可以设置 `ACMCODER_DOCKER_IMAGE`：
 
 ```powershell
 $env:ACMCODER_DOCKER_IMAGE="ghcr.io/your-name/acmcoder-runner:v1"
@@ -62,7 +62,9 @@ export ACMCODER_DOCKER_IMAGE=ghcr.io/your-name/acmcoder-runner:v1
 node bin/acmcoder.js test two-sum --lang python --file problems/two-sum/templates/main.py --runner docker
 ```
 
-`node bin/acmcoder.js doctor` 会同时展示本地 Java/C++/Python 工具链和 Docker runner 状态，包括 Docker daemon 是否可用、配置的镜像是否已经存在。
+如果不想让 ACMCoder 自动构建镜像，可以设置 `ACMCODER_DOCKER_AUTO_BUILD=0`。这时缺镜像会直接返回 `NO_RUNNER` 并提示手动构建命令。
+
+`node bin/acmcoder.js doctor` 会同时展示本地 Java/C++/Python 工具链和 Docker runner 状态，包括 Docker daemon 是否可用、配置的镜像是否已经存在或是否会在首次运行时自动构建。
 
 Web 页面也可以在运行模式里选择 Docker。Docker 模式会禁用容器网络，并限制 CPU、内存和进程数量。
 

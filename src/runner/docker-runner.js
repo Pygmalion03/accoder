@@ -1,4 +1,5 @@
 import { runProcess } from "./process.js";
+import { projectRoot } from "../core/problems.js";
 
 export const DOCKER_IMAGE = "acmcoder-runner:local";
 export const DOCKER_WORKDIR = "/workspace";
@@ -10,6 +11,14 @@ export function getDockerImage(env = process.env) {
 
 export function dockerBuildCommand(image = getDockerImage()) {
   return `docker build -t ${image} .`;
+}
+
+export function buildDockerImageArgs(image = getDockerImage()) {
+  return ["build", "-t", image, "."];
+}
+
+export function isDockerAutoBuildEnabled(env = process.env) {
+  return String(env?.ACMCODER_DOCKER_AUTO_BUILD ?? "1") !== "0";
 }
 
 export function shellQuote(value) {
@@ -82,7 +91,7 @@ export function classifyDockerUnavailable(result, image = getDockerImage()) {
   return null;
 }
 
-export function interpretDockerDoctorResult({ image = getDockerImage(), dockerResult, imageResult }) {
+export function interpretDockerDoctorResult({ image = getDockerImage(), dockerResult, imageResult, env = process.env }) {
   const dockerUnavailable = classifyDockerUnavailable(dockerResult, image);
   if (dockerUnavailable) {
     return {
@@ -109,6 +118,14 @@ export function interpretDockerDoctorResult({ image = getDockerImage(), dockerRe
   );
 
   if (imageUnavailable || imageResult.code !== 0) {
+    if (isDockerAutoBuildEnabled(env)) {
+      return {
+        ready: true,
+        image,
+        message: `Docker daemon ready; image ${image} will be built automatically on first Docker run.`,
+      };
+    }
+
     return {
       ready: false,
       image,
@@ -123,17 +140,89 @@ export function interpretDockerDoctorResult({ image = getDockerImage(), dockerRe
   };
 }
 
+function dockerUnavailableResult(unavailable, result = {}) {
+  return {
+    ...result,
+    ...unavailable,
+    runnerUnavailable: true,
+  };
+}
+
+export async function ensureDockerImage(options = {}) {
+  const image = options.image || getDockerImage(options.env);
+  const runProcessFn = options.runProcess || runProcess;
+  const imageResult = await runProcessFn("docker", ["image", "inspect", image], {
+    timeoutMs: options.imageCheckTimeoutMs ?? 5000,
+  });
+  const imageUnavailable = classifyDockerUnavailable(imageResult, image);
+
+  if (!imageUnavailable && imageResult.code === 0) {
+    return { ready: true, built: false, image };
+  }
+
+  if (imageUnavailable && !/image is missing/i.test(imageUnavailable.message)) {
+    return {
+      ready: false,
+      image,
+      result: dockerUnavailableResult(imageUnavailable, imageResult),
+    };
+  }
+
+  if (!isDockerAutoBuildEnabled(options.env)) {
+    return {
+      ready: false,
+      image,
+      result: dockerUnavailableResult(
+        imageUnavailable || {
+          status: "NO_RUNNER",
+          message: `Docker runner image is missing. Run: ${dockerBuildCommand(image)}`,
+        },
+        imageResult,
+      ),
+    };
+  }
+
+  const buildResult = await runProcessFn("docker", buildDockerImageArgs(image), {
+    cwd: options.cwd || projectRoot,
+    timeoutMs: options.buildTimeoutMs ?? 120000,
+  });
+  const buildUnavailable = classifyDockerUnavailable(buildResult, image);
+
+  if (buildUnavailable) {
+    return {
+      ready: false,
+      image,
+      result: dockerUnavailableResult(buildUnavailable, buildResult),
+    };
+  }
+
+  if (buildResult.timedOut || buildResult.code !== 0) {
+    return {
+      ready: false,
+      image,
+      result: {
+        ...buildResult,
+        status: "NO_RUNNER",
+        message: `Docker runner image build failed. Run manually to inspect the error: ${dockerBuildCommand(image)}`,
+        runnerUnavailable: true,
+      },
+    };
+  }
+
+  return { ready: true, built: true, image };
+}
+
 export async function checkDockerRunner(options = {}) {
   const image = options.image || getDockerImage(options.env);
   const timeoutMs = options.timeoutMs ?? 5000;
   const dockerResult = await runProcess("docker", ["version", "--format", "{{.Server.Version}}"], { timeoutMs });
 
   if (dockerResult.failedToStart || dockerResult.code !== 0) {
-    return interpretDockerDoctorResult({ image, dockerResult, imageResult: null });
+    return interpretDockerDoctorResult({ image, dockerResult, imageResult: null, env: options.env });
   }
 
   const imageResult = await runProcess("docker", ["image", "inspect", image], { timeoutMs });
-  return interpretDockerDoctorResult({ image, dockerResult, imageResult });
+  return interpretDockerDoctorResult({ image, dockerResult, imageResult, env: options.env });
 }
 
 export const dockerRunner = {
@@ -149,17 +238,31 @@ export const dockerRunner = {
 
   async execute(commandSpec, options = {}) {
     const image = options.image || getDockerImage(options.env);
+    const runProcessFn = options.runProcess || runProcess;
+    const imageReady = await ensureDockerImage({
+      image,
+      env: options.env,
+      runProcess: runProcessFn,
+      imageCheckTimeoutMs: options.imageCheckTimeoutMs,
+      buildTimeoutMs: options.buildTimeoutMs,
+      cwd: options.cwd,
+    });
+
+    if (!imageReady.ready) {
+      return imageReady.result;
+    }
+
     const dockerArgs = buildDockerArgs({
       hostWorkdir: options.hostWorkdir,
       commandSpec,
       image,
     });
-    const result = await runProcess("docker", dockerArgs, {
+    const result = await runProcessFn("docker", dockerArgs, {
       stdin: options.stdin,
       timeoutMs: options.timeoutMs,
     });
     const unavailable = classifyDockerUnavailable(result, image);
 
-    return unavailable ? { ...result, ...unavailable, runnerUnavailable: true } : result;
+    return unavailable ? dockerUnavailableResult(unavailable, result) : result;
   },
 };

@@ -4,8 +4,10 @@ import fs from "node:fs";
 
 import {
   buildDockerArgs,
+  buildDockerImageArgs,
   classifyDockerUnavailable,
   dockerRunner,
+  ensureDockerImage,
   getDockerImage,
   interpretDockerDoctorResult,
   shellQuote,
@@ -63,6 +65,10 @@ test("builds docker run arguments with configured image", () => {
   assert.equal(args.includes("acmcoder-runner:local"), false);
 });
 
+test("builds docker image arguments", () => {
+  assert.deepEqual(buildDockerImageArgs("custom/acmcoder-runner:test"), ["build", "-t", "custom/acmcoder-runner:test", "."]);
+});
+
 test("normalizes Windows-style workspace paths for the Linux container", () => {
   const args = buildDockerArgs({
     hostWorkdir: "E:\\Projects\\acmcoder\\tmp",
@@ -73,6 +79,55 @@ test("normalizes Windows-style workspace paths for the Linux container", () => {
   });
 
   assert.equal(args.at(-1), "'/workspace/main.exe'");
+});
+
+test("auto-builds missing Docker runner image before execution", async () => {
+  const calls = [];
+  const result = await dockerRunner.execute(
+    {
+      command: "python",
+      args: ["/workspace/main.py"],
+    },
+    {
+      hostWorkdir: "E:\\Projects\\acmcoder\\tmp",
+      image: "acmcoder-runner:test-autobuild",
+      runProcess: async (command, args, options = {}) => {
+        calls.push({ command, args, options });
+        if (args[0] === "image") {
+          return { code: 1, stdout: "", stderr: "No such image: acmcoder-runner:test-autobuild" };
+        }
+        if (args[0] === "build") {
+          return { code: 0, stdout: "built", stderr: "" };
+        }
+        return { code: 0, stdout: "ok", stderr: "" };
+      },
+    },
+  );
+
+  assert.equal(result.code, 0);
+  assert.equal(result.stdout, "ok");
+  assert.deepEqual(
+    calls.map((call) => call.args[0]),
+    ["image", "build", "run"],
+  );
+  assert.deepEqual(calls[1].args, ["build", "-t", "acmcoder-runner:test-autobuild", "."]);
+  assert.ok(calls[1].options.cwd.endsWith("acmcoder"));
+});
+
+test("reports Docker image build failures as unavailable runner", async () => {
+  const result = await ensureDockerImage({
+    image: "acmcoder-runner:test-build-fail",
+    runProcess: async (_command, args) => {
+      if (args[0] === "image") {
+        return { code: 1, stdout: "", stderr: "No such image: acmcoder-runner:test-build-fail" };
+      }
+      return { code: 1, stdout: "", stderr: "apt failed" };
+    },
+  });
+
+  assert.equal(result.ready, false);
+  assert.equal(result.result.status, "NO_RUNNER");
+  assert.match(result.result.message, /Docker runner image build failed/);
 });
 
 test("classifies missing docker command as unavailable runner", () => {
@@ -132,11 +187,23 @@ test("interprets Docker doctor result when image is ready", () => {
   assert.match(result.message, /image acmcoder-runner:local/);
 });
 
-test("interprets Docker doctor result when image is missing", () => {
+test("interprets Docker doctor result when image is missing but auto-build is enabled", () => {
   const result = interpretDockerDoctorResult({
     image: "acmcoder-runner:local",
     dockerResult: { code: 0, stdout: "29.2.1\n", stderr: "" },
     imageResult: { code: 1, stdout: "", stderr: "No such image: acmcoder-runner:local" },
+  });
+
+  assert.equal(result.ready, true);
+  assert.match(result.message, /will be built automatically/);
+});
+
+test("interprets Docker doctor result when image is missing and auto-build is disabled", () => {
+  const result = interpretDockerDoctorResult({
+    image: "acmcoder-runner:local",
+    dockerResult: { code: 0, stdout: "29.2.1\n", stderr: "" },
+    imageResult: { code: 1, stdout: "", stderr: "No such image: acmcoder-runner:local" },
+    env: { ACMCODER_DOCKER_AUTO_BUILD: "0" },
   });
 
   assert.equal(result.ready, false);
