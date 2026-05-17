@@ -159,6 +159,19 @@ label {
   font-size: 12px;
 }
 
+.ac-count {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border: 1px solid rgba(18, 97, 63, 0.25);
+  border-radius: 999px;
+  background: #d7eadf;
+  color: var(--good);
+  padding: 2px 7px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .button-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -218,9 +231,14 @@ label,
 
 .toolbar {
   display: grid;
-  grid-template-columns: minmax(108px, 1fr) auto auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   align-items: end;
+}
+
+.toolbar button {
+  min-width: 0;
+  white-space: normal;
 }
 
 .code-editor {
@@ -377,6 +395,7 @@ pre {
 .run-status.CE,
 .run-status.TLE,
 .run-status.NO_TOOLCHAIN,
+.run-status.NO_RUNNER,
 .run-status.error {
   background: #f3d8d8;
   color: var(--bad);

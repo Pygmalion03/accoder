@@ -2,6 +2,8 @@ const state = {
   problems: [],
   selected: null,
   lastMemoryCapturedAt: "",
+  selectionMode: false,
+  selectedProblemIds: new Set(),
 };
 
 const CACHE_KEYS = {
@@ -57,6 +59,11 @@ int main() {
 const elements = {
   search: document.querySelector("#search"),
   list: document.querySelector("#problem-list"),
+  selectProblems: document.querySelector("#select-problems"),
+  deleteProblems: document.querySelector("#delete-problems"),
+  exportProblems: document.querySelector("#export-problems"),
+  importProblems: document.querySelector("#import-problems"),
+  importFile: document.querySelector("#import-file"),
   title: document.querySelector("#problem-title"),
   eyebrow: document.querySelector("#eyebrow"),
   link: document.querySelector("#leetcode-link"),
@@ -315,6 +322,14 @@ function handleEditorKeydown(event) {
     '"': '"',
     "'": "'",
   };
+  const closingPairs = {
+    ")": "(",
+    "]": "[",
+    "}": "{",
+    '"': '"',
+    "'": "'",
+  };
+  const isPlainKey = !event.ctrlKey && !event.metaKey && !event.altKey;
 
   if (event.key === "Tab") {
     event.preventDefault();
@@ -340,13 +355,93 @@ function handleEditorKeydown(event) {
     return;
   }
 
-  if (pairs[event.key] && !event.ctrlKey && !event.metaKey && !event.altKey) {
+  if (
+    closingPairs[event.key] &&
+    isPlainKey &&
+    elements.code.selectionStart === elements.code.selectionEnd &&
+    elements.code.value[elements.code.selectionStart] === event.key
+  ) {
+    event.preventDefault();
+    elements.code.setSelectionRange(elements.code.selectionStart + 1, elements.code.selectionStart + 1);
+    syncHighlight();
+    return;
+  }
+
+  if (pairs[event.key] && isPlainKey) {
     event.preventDefault();
     const start = elements.code.selectionStart;
     const end = elements.code.selectionEnd;
     const selected = elements.code.value.slice(start, end);
     replaceSelection(`${event.key}${selected}${pairs[event.key]}`, selected ? selected.length + 2 : 1);
   }
+}
+
+function handleEditorBeforeInput(event) {
+  const closingPairs = {
+    ")": "(",
+    "]": "[",
+    "}": "{",
+    '"': '"',
+    "'": "'",
+  };
+
+  if (
+    event.inputType === "insertText" &&
+    closingPairs[event.data] &&
+    elements.code.selectionStart === elements.code.selectionEnd &&
+    elements.code.value[elements.code.selectionStart] === event.data
+  ) {
+    event.preventDefault();
+    elements.code.setSelectionRange(elements.code.selectionStart + 1, elements.code.selectionStart + 1);
+    syncHighlight();
+  }
+}
+
+function problemIdForProblem(problem) {
+  return problem?.slug || "";
+}
+
+function progressKeyForSlug(slug) {
+  return String(slug || "").replace(/^memory:/, "");
+}
+
+function getAcCount(problem) {
+  const count = Number(problem.progress?.acCount || 0);
+  return Number.isFinite(count) && count > 0 ? count : 0;
+}
+
+function applyProgress(slug, progress) {
+  if (!progress) {
+    return;
+  }
+
+  const targetKey = progressKeyForSlug(slug || progress.slug);
+  for (const problem of state.problems) {
+    if (progressKeyForSlug(problem.slug) === targetKey) {
+      problem.progress = progress;
+    }
+  }
+
+  if (state.selected && progressKeyForSlug(state.selected.slug) === targetKey) {
+    state.selected.progress = progress;
+  }
+}
+
+function selectedProblemIdsOrAll() {
+  if (state.selectedProblemIds.size > 0) {
+    return [...state.selectedProblemIds];
+  }
+  return state.problems.map(problemIdForProblem);
+}
+
+function updateProblemActions() {
+  const selectedCount = state.selectedProblemIds.size;
+  elements.selectProblems.textContent = state.selectionMode ? "完成选择" : "选择题目";
+  elements.exportProblems.disabled = state.problems.length === 0;
+  elements.deleteProblems.hidden = !state.selectionMode;
+  elements.deleteProblems.disabled = selectedCount === 0;
+  elements.exportProblems.textContent = selectedCount > 0 ? `导出选中 (${selectedCount})` : "导出全部";
+  elements.deleteProblems.textContent = selectedCount > 0 ? `删除选中 (${selectedCount})` : "删除选中";
 }
 
 function renderProblemList() {
@@ -364,10 +459,36 @@ function renderProblemList() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `problem-item${state.selected?.slug === problem.slug ? " active" : ""}`;
-    button.innerHTML = `<strong>${formatProblemListTitle(problem)}</strong><span>${problem.slug} · ${problem.difficulty} · ${problem.rank.frequency}</span>`;
+    button.innerHTML = `<strong>${formatProblemListTitle(problem)}</strong><span class="problem-meta">${problem.slug} · ${problem.difficulty}</span><span class="ac-count">AC ${getAcCount(problem)}</span>`;
     button.addEventListener("click", () => selectProblem(problem.slug));
-    elements.list.appendChild(button);
+    if (!state.selectionMode) {
+      elements.list.appendChild(button);
+      continue;
+    }
+
+    const problemId = problemIdForProblem(problem);
+    const row = document.createElement("div");
+    row.className = "problem-row";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "memory-select";
+    checkbox.checked = state.selectedProblemIds.has(problemId);
+    checkbox.setAttribute("aria-label", `选择 ${problem.title}`);
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) {
+        state.selectedProblemIds.add(problemId);
+      } else {
+        state.selectedProblemIds.delete(problemId);
+      }
+      updateProblemActions();
+    });
+
+    row.appendChild(checkbox);
+    row.appendChild(button);
+    elements.list.appendChild(row);
   }
+
+  updateProblemActions();
 }
 
 async function loadTemplate(options = {}) {
@@ -432,6 +553,7 @@ function buildMemoryProblem(page) {
       url: page.url,
     },
     description: page.content,
+    progress: page.progress || { acCount: 0 },
     cases: [],
   };
 }
@@ -493,11 +615,8 @@ function formatEyebrow(problem) {
     problem.frontendId ? `#${problem.frontendId}` : "",
     problem.difficulty,
     ...(Array.isArray(problem.tags) ? problem.tags : []),
+    `AC ${getAcCount(problem)}`,
   ].filter(Boolean);
-
-  if (!problem.memorySource && problem.rank?.frequency) {
-    parts.push(`frequency ${problem.rank.frequency}`);
-  }
 
   return parts.join(" · ");
 }
@@ -510,6 +629,7 @@ async function selectProblem(slug, options = {}) {
   const existing = state.problems.find((item) => item.slug === slug);
   const problem = existing?.memorySource ? existing : (await getJson(`/api/problems/${slug}`)).problem;
   state.selected = problem;
+  applyProgress(problem.slug, problem.progress);
 
   elements.eyebrow.textContent = formatEyebrow(problem);
   elements.title.textContent = problem.title;
@@ -556,6 +676,11 @@ async function runCode() {
       }),
     });
     setResult(body.result);
+    if (body.result.status === "AC" && body.progress) {
+      applyProgress(state.selected.slug, body.progress);
+      renderProblemList();
+      elements.eyebrow.textContent = formatEyebrow(state.selected);
+    }
     saveWorkspaceCache();
   } catch (error) {
     setResult({
@@ -565,6 +690,132 @@ async function runCode() {
       stderr: "",
     });
   }
+}
+
+function cleanupProblemWorkspaceCache(slug) {
+  for (const language of ["python", "java", "cpp"]) {
+    localStorage.removeItem(`acmcoder.web.problem.${slug}.${language}`);
+  }
+}
+
+function downloadJson(filename, body) {
+  const blob = new Blob([JSON.stringify(body, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function readJsonFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      try {
+        resolve(JSON.parse(String(reader.result || "")));
+      } catch (error) {
+        reject(error);
+      }
+    });
+    reader.addEventListener("error", () => reject(reader.error || new Error("Failed to read file.")));
+    reader.readAsText(file, "utf-8");
+  });
+}
+
+async function reloadProblems() {
+  const body = await getJson("/api/problems");
+  state.problems = body.problems;
+  await loadMemoryHistory().catch(() => false);
+  renderProblemList();
+
+  if (!state.selected || !state.problems.some((problem) => problem.slug === state.selected.slug)) {
+    const fallback = state.problems[0];
+    if (fallback) {
+      await selectProblem(fallback.slug);
+    }
+  }
+}
+
+async function importProblems(file) {
+  if (!file) {
+    return;
+  }
+
+  const payload = await readJsonFile(file);
+  const body = await getJson("/api/problems/import", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  state.selectedProblemIds.clear();
+  state.selectionMode = false;
+  await reloadProblems();
+  setResult({
+    status: "IDLE",
+    message: `已导入 ${body.importedCount || 0} 道题目。`,
+    stdout: "",
+    stderr: "",
+  });
+}
+
+async function deleteSelectedProblems() {
+  const slugs = [...state.selectedProblemIds];
+  if (slugs.length === 0) {
+    return;
+  }
+
+  if (!window.confirm(`删除选中的 ${slugs.length} 道记忆题目？`)) {
+    return;
+  }
+
+  const body = await getJson("/api/problems", {
+    method: "DELETE",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ slugs }),
+  });
+  const deletedSlugs = new Set(body.deletedSlugs || []);
+  const selectedWasDeleted = state.selected && deletedSlugs.has(problemIdForProblem(state.selected));
+
+  for (const slug of deletedSlugs) {
+    state.selectedProblemIds.delete(slug);
+    cleanupProblemWorkspaceCache(slug);
+  }
+
+  state.problems = state.problems.filter((problem) => !deletedSlugs.has(problemIdForProblem(problem)));
+  renderProblemList();
+  setResult({
+    status: "IDLE",
+    message: `已删除 ${deletedSlugs.size} 道记忆题目。`,
+    stdout: "",
+    stderr: "",
+  });
+
+  elements.message.textContent = `已删除 ${deletedSlugs.size} 道题目。`;
+
+  if (selectedWasDeleted) {
+    const fallback = state.problems[0];
+    if (fallback) {
+      await selectProblem(fallback.slug);
+    }
+  }
+}
+
+async function exportProblems() {
+  const slugs = selectedProblemIdsOrAll();
+  if (slugs.length === 0) {
+    return;
+  }
+
+  const query = slugs.length > 0 ? `?slugs=${encodeURIComponent(slugs.join(","))}` : "";
+  const body = await getJson(`/api/problems/export${query}`);
+  downloadJson(`acmcoder-problems-${new Date().toISOString().slice(0, 10)}.json`, body);
 }
 
 async function loadCurrentMemory({ autoSelect = false } = {}) {
@@ -589,6 +840,35 @@ async function init() {
   elements.language.value = localStorage.getItem(CACHE_KEYS.language) || elements.language.value;
   elements.runner.value = localStorage.getItem(CACHE_KEYS.runner) || elements.runner.value;
   elements.search.addEventListener("input", renderProblemList);
+  elements.selectProblems.addEventListener("click", () => {
+    state.selectionMode = !state.selectionMode;
+    if (!state.selectionMode) {
+      state.selectedProblemIds.clear();
+    }
+    renderProblemList();
+  });
+  elements.deleteProblems.addEventListener("click", () => {
+    deleteSelectedProblems().catch((error) => {
+      setResult({ status: "ERROR", message: error.message, stdout: "", stderr: "" });
+    });
+  });
+  elements.exportProblems.addEventListener("click", () => {
+    exportProblems().catch((error) => {
+      setResult({ status: "ERROR", message: error.message, stdout: "", stderr: "" });
+    });
+  });
+  elements.importProblems.addEventListener("click", () => {
+    elements.importFile.click();
+  });
+  elements.importFile.addEventListener("change", () => {
+    importProblems(elements.importFile.files?.[0])
+      .catch((error) => {
+        setResult({ status: "ERROR", message: error.message, stdout: "", stderr: "" });
+      })
+      .finally(() => {
+        elements.importFile.value = "";
+      });
+  });
   elements.language.addEventListener("change", async () => {
     localStorage.setItem(CACHE_KEYS.language, elements.language.value);
     if (!restoreWorkspaceCache()) {
@@ -613,6 +893,7 @@ async function init() {
     saveWorkspaceCache();
   });
   elements.code.addEventListener("scroll", syncHighlight);
+  elements.code.addEventListener("beforeinput", handleEditorBeforeInput);
   elements.code.addEventListener("keydown", handleEditorKeydown);
   elements.stdin.addEventListener("input", saveWorkspaceCache);
   elements.expected.addEventListener("input", saveWorkspaceCache);

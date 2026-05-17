@@ -98,11 +98,25 @@ test("sidebar caches the last captured problem", () => {
 });
 
 test("sidebar can run code through the local runner", () => {
+  const html = fs.readFileSync("extension/sidebar.html", "utf8");
+  const css = fs.readFileSync("extension/sidebar.css", "utf8");
   const script = fs.readFileSync("extension/sidebar.js", "utf8");
 
+  assert.match(html, /id="runner"/);
+  assert.match(html, /id="ac-count"/);
+  assert.match(html, /value="local"/);
+  assert.match(html, /value="docker"/);
   assert.match(script, /runCode/);
   assert.match(script, /api\/run/);
   assert.match(script, /sidebarWorkspaceKey/);
+  assert.match(script, /runner:\s*"acmcoder\.sidebar\.runner"/);
+  assert.match(script, /runner:\s*document\.querySelector\("#runner"\)/);
+  assert.match(script, /runner:\s*elements\.runner\.value/);
+  assert.match(script, /Running \$\{elements\.runner\.value\} runner/);
+  assert.match(script, /body\.progress/);
+  assert.match(script, /renderProgress/);
+  assert.match(css, /\.ac-count/);
+  assert.match(css, /\.run-status\.NO_RUNNER/);
 });
 
 test("sidebar editor renders line numbers next to code", () => {
@@ -119,4 +133,16 @@ test("sidebar editor renders line numbers next to code", () => {
   assert.match(css, /#code\s*\{[\s\S]*color:\s*#d8dee9/);
   assert.match(script, /lineNumbers:\s*document\.querySelector\("#line-numbers"\)/);
   assert.match(script, /syncLineNumbers/);
+});
+
+test("sidebar editor skips over already inserted closing brackets", () => {
+  const script = fs.readFileSync("extension/sidebar.js", "utf8");
+
+  assert.match(script, /closingPairs/);
+  assert.match(script, /handleEditorBeforeInput/);
+  assert.match(script, /event\.inputType === "insertText"/);
+  assert.match(script, /elements\.code\.value\[elements\.code\.selectionStart\] === event\.key/);
+  assert.match(script, /elements\.code\.value\[elements\.code\.selectionStart\] === event\.data/);
+  assert.match(script, /setSelectionRange\(elements\.code\.selectionStart \+ 1/);
+  assert.match(script, /addEventListener\("beforeinput", handleEditorBeforeInput\)/);
 });

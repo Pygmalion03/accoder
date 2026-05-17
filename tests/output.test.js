@@ -16,6 +16,15 @@ test("compares equivalent ACM output as AC", () => {
   });
 });
 
+test("compares JSON array output while ignoring insignificant spaces", () => {
+  const result = compareOutput("[[-1, -1, 2], [-1, 0, 1]]\n", "[[-1,-1,2],[-1,0,1]]");
+
+  assert.deepEqual(result, {
+    status: "AC",
+    message: "Accepted",
+  });
+});
+
 test("preserves meaningful output differences as WA", () => {
   const result = compareOutput("1 0\n", "0 1\n");
 

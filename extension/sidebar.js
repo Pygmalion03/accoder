@@ -4,6 +4,7 @@ const STORAGE_KEYS = {
   llmApiKey: "acmcoder.llmApiKey",
   lastPage: "acmcoder.lastPage",
   language: "acmcoder.sidebar.language",
+  runner: "acmcoder.sidebar.runner",
 };
 
 const GENERIC_TEMPLATES = {
@@ -157,11 +158,13 @@ const elements = {
   title: document.querySelector("#title"),
   slug: document.querySelector("#slug"),
   tags: document.querySelector("#tags"),
+  acCount: document.querySelector("#ac-count"),
   llmKey: document.querySelector("#llm-key"),
   saveKey: document.querySelector("#save-key"),
   memoryFile: document.querySelector("#memory-file"),
   openLocal: document.querySelector("#open-local"),
   language: document.querySelector("#language"),
+  runner: document.querySelector("#runner"),
   resetCode: document.querySelector("#reset-code"),
   sampleIo: document.querySelector("#sample-io"),
   runCode: document.querySelector("#run-code"),
@@ -395,11 +398,36 @@ function renderTags(page) {
   elements.tags.innerHTML = tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("");
 }
 
+function getAcCount(progress) {
+  const count = Number(progress?.acCount || 0);
+  return Number.isFinite(count) && count > 0 ? count : 0;
+}
+
+function renderProgress(progress = capturedPage?.progress) {
+  elements.acCount.textContent = `AC ${getAcCount(progress)}`;
+}
+
+async function refreshCapturedProgress() {
+  if (!capturedPage?.slug) {
+    renderProgress();
+    return;
+  }
+
+  const body = await getJson(`${LOCAL_BASE}/api/memory/pages?slug=${encodeURIComponent(capturedPage.slug)}`);
+  const page = body.pages?.[0];
+  if (page?.progress) {
+    capturedPage = { ...capturedPage, progress: page.progress };
+    renderProgress(page.progress);
+    await cachePage(capturedPage);
+  }
+}
+
 async function renderPage(page) {
   capturedPage = page;
   elements.title.textContent = page.title || page.slug || "-";
   elements.slug.textContent = page.slug || "未读取";
   renderTags(page);
+  renderProgress(page.progress);
 
   const restored = await restoreWorkspaceCache();
   if (!restored) {
@@ -418,6 +446,7 @@ async function loadCachedPage() {
   const page = values[STORAGE_KEYS.lastPage];
   if (page?.slug) {
     await renderPage(page);
+    await refreshCapturedProgress().catch(() => {});
     setStatus(`已恢复最近读取：${page.slug}`, "ok");
     return true;
   }
@@ -458,6 +487,9 @@ async function saveCapturedPage() {
     body: JSON.stringify(capturedPage),
   });
 
+  capturedPage = { ...capturedPage, progress: body.page.progress };
+  renderProgress(body.page.progress);
+  await cachePage(capturedPage);
   setStatus(`已记忆到本地：${body.page.slug}。ACMCoder 页面会自动加载。`, "ok");
 }
 
@@ -465,7 +497,7 @@ async function runCode() {
   elements.runCode.disabled = true;
   setRunResult({
     status: "RUNNING",
-    message: "Running local toolchain...",
+    message: `Running ${elements.runner.value} runner...`,
     stdout: "",
     stderr: "",
   });
@@ -480,12 +512,20 @@ async function runCode() {
       body: JSON.stringify({
         slug: capturedPage?.slug || "scratch",
         language: elements.language.value,
+        runner: elements.runner.value,
         code: elements.code.value,
         stdin: elements.stdin.value,
         expected: elements.expected.value,
       }),
     });
     setRunResult(body.result);
+    if (body.progress) {
+      capturedPage = capturedPage ? { ...capturedPage, progress: body.progress } : capturedPage;
+      renderProgress(body.progress);
+      if (capturedPage) {
+        await cachePage(capturedPage);
+      }
+    }
   } catch (error) {
     setRunResult({
       status: "ERROR",
@@ -508,16 +548,18 @@ async function loadMemoryLocation() {
 }
 
 async function loadSettings() {
-  const values = await storageGet([STORAGE_KEYS.memoryMode, STORAGE_KEYS.llmApiKey, STORAGE_KEYS.language]);
+  const values = await storageGet([STORAGE_KEYS.memoryMode, STORAGE_KEYS.llmApiKey, STORAGE_KEYS.language, STORAGE_KEYS.runner]);
   elements.memoryMode.checked = Boolean(values[STORAGE_KEYS.memoryMode]);
   elements.llmKey.value = values[STORAGE_KEYS.llmApiKey] || "";
   elements.language.value = values[STORAGE_KEYS.language] || elements.language.value;
+  elements.runner.value = values[STORAGE_KEYS.runner] || elements.runner.value;
 }
 
 async function saveSettings() {
   await storageSet({
     [STORAGE_KEYS.memoryMode]: elements.memoryMode.checked,
     [STORAGE_KEYS.language]: elements.language.value,
+    [STORAGE_KEYS.runner]: elements.runner.value,
   });
 }
 
@@ -569,6 +611,14 @@ function handleEditorKeydown(event) {
     '"': '"',
     "'": "'",
   };
+  const closingPairs = {
+    ")": "(",
+    "]": "[",
+    "}": "{",
+    '"': '"',
+    "'": "'",
+  };
+  const isPlainKey = !event.ctrlKey && !event.metaKey && !event.altKey;
 
   if (event.key === "Tab") {
     event.preventDefault();
@@ -594,12 +644,45 @@ function handleEditorKeydown(event) {
     return;
   }
 
-  if (pairs[event.key] && !event.ctrlKey && !event.metaKey && !event.altKey) {
+  if (
+    closingPairs[event.key] &&
+    isPlainKey &&
+    elements.code.selectionStart === elements.code.selectionEnd &&
+    elements.code.value[elements.code.selectionStart] === event.key
+  ) {
+    event.preventDefault();
+    elements.code.setSelectionRange(elements.code.selectionStart + 1, elements.code.selectionStart + 1);
+    syncHighlight();
+    return;
+  }
+
+  if (pairs[event.key] && isPlainKey) {
     event.preventDefault();
     const start = elements.code.selectionStart;
     const end = elements.code.selectionEnd;
     const selected = elements.code.value.slice(start, end);
     replaceSelection(`${event.key}${selected}${pairs[event.key]}`, selected ? selected.length + 2 : 1);
+  }
+}
+
+function handleEditorBeforeInput(event) {
+  const closingPairs = {
+    ")": "(",
+    "]": "[",
+    "}": "{",
+    '"': '"',
+    "'": "'",
+  };
+
+  if (
+    event.inputType === "insertText" &&
+    closingPairs[event.data] &&
+    elements.code.selectionStart === elements.code.selectionEnd &&
+    elements.code.value[elements.code.selectionStart] === event.data
+  ) {
+    event.preventDefault();
+    elements.code.setSelectionRange(elements.code.selectionStart + 1, elements.code.selectionStart + 1);
+    syncHighlight();
   }
 }
 
@@ -632,6 +715,7 @@ elements.openLocal.addEventListener("click", () => {
   chrome.tabs.create({ url: LOCAL_BASE });
 });
 elements.language.addEventListener("change", () => runAction(handleLanguageChange));
+elements.runner.addEventListener("change", () => runAction(saveSettings));
 elements.resetCode.addEventListener("click", () => resetCode());
 elements.sampleIo.addEventListener("click", restoreSampleIo);
 elements.runCode.addEventListener("click", runCode);
@@ -640,6 +724,7 @@ elements.code.addEventListener("input", () => {
   void saveWorkspaceCache();
 });
 elements.code.addEventListener("scroll", syncHighlight);
+elements.code.addEventListener("beforeinput", handleEditorBeforeInput);
 elements.code.addEventListener("keydown", handleEditorKeydown);
 elements.stdin.addEventListener("input", () => void saveWorkspaceCache());
 elements.expected.addEventListener("input", () => void saveWorkspaceCache());

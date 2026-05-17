@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import { findProblem, loadProblems } from "../src/core/problems.js";
 import { parseCliArgs, requireOption } from "../src/cli/args.js";
 import { checkToolchain, listLanguages } from "../src/runner/toolchains.js";
+import { checkDockerRunner } from "../src/runner/docker-runner.js";
 import { runProblemCases, runSubmission } from "../src/runner/run.js";
 import { startServer } from "../src/server/server.js";
 
@@ -80,6 +81,9 @@ async function main() {
       const mark = result.ready ? "OK" : "MISSING";
       console.log(`${mark.padEnd(8, " ")} ${result.label}: ${result.checks.map((item) => item.command).join(", ")}`);
     }
+    const docker = await checkDockerRunner();
+    const mark = docker.ready ? "OK" : "MISSING";
+    console.log(`${mark.padEnd(8, " ")} Docker runner: ${docker.message}`);
     return;
   }
 

@@ -21,6 +21,13 @@
           <span>搜索</span>
           <input id="search" type="search" placeholder="slug / 题号 / 标签" />
         </label>
+        <div class="memory-actions">
+          <button id="select-problems" type="button">选择题目</button>
+          <button id="export-problems" type="button">导出全部</button>
+          <button id="import-problems" type="button">导入</button>
+          <button id="delete-problems" type="button" class="danger" disabled hidden>删除选中</button>
+          <input id="import-file" type="file" accept="application/json,.json" hidden />
+        </div>
         <div id="problem-list" class="problem-list"></div>
       </aside>
 

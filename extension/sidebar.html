@@ -27,6 +27,7 @@
         <div class="current-problem">
           <strong id="title">-</strong>
           <span id="tags" class="tags"></span>
+          <span id="ac-count" class="ac-count">AC 0</span>
         </div>
         <div class="button-row">
           <button id="capture" type="button">读取当前题目</button>
@@ -47,6 +48,13 @@
             </select>
           </label>
           <button id="reset-code" type="button" class="secondary">还原初始代码</button>
+          <label>
+            运行模式
+            <select id="runner">
+              <option value="local">Local</option>
+              <option value="docker">Docker</option>
+            </select>
+          </label>
           <button id="run-code" type="button">Run</button>
         </div>
 

@@ -60,6 +60,8 @@ test("web app renders the title eyebrow from id difficulty and tags", () => {
   assert.match(script, /problem\.frontendId/);
   assert.match(script, /problem\.difficulty/);
   assert.match(script, /problem\.tags/);
+  assert.doesNotMatch(script, /problem\.rank\.frequency/);
+  assert.doesNotMatch(script, /frequency \$\{problem\.rank\.frequency\}/);
 });
 
 test("web editor renders line numbers next to code", () => {
@@ -90,4 +92,57 @@ test("web UI exposes local and docker runner modes", () => {
   assert.match(script, /runner:\s*elements\.runner\.value/);
   assert.match(script, /acmcoder\.web\.runner/);
   assert.match(css, /\.status\.NO_RUNNER/);
+});
+
+test("web UI exposes problem selection, batch delete, and export controls", () => {
+  const html = fs.readFileSync("web/index.html", "utf8");
+  const script = fs.readFileSync("web/app.js", "utf8");
+  const css = fs.readFileSync("web/styles.css", "utf8");
+
+  assert.match(html, /id="select-problems"/);
+  assert.match(html, /id="delete-problems"/);
+  assert.match(html, /id="export-problems"/);
+  assert.match(html, /id="import-problems"/);
+  assert.match(html, /id="import-file"/);
+  assert.match(script, /selectionMode:\s*false/);
+  assert.match(script, /selectedProblemIds:\s*new Set\(\)/);
+  assert.match(script, /api\/problems\/export/);
+  assert.match(script, /api\/problems\/import/);
+  assert.match(script, /api\/problems/);
+  assert.match(script, /method:\s*"DELETE"/);
+  assert.match(script, /method:\s*"POST"/);
+  assert.match(script, /deleteSelectedProblems/);
+  assert.match(script, /exportProblems/);
+  assert.match(script, /importProblems/);
+  assert.match(script, /FileReader/);
+  assert.match(script, /problemIdForProblem/);
+  assert.match(css, /\.memory-actions/);
+  assert.match(css, /\.memory-select/);
+  assert.match(css, /\.problem-item[\s\S]*color:\s*var\(--ink\)/);
+});
+
+test("web UI records accepted counts and highlights them", () => {
+  const script = fs.readFileSync("web/app.js", "utf8");
+  const css = fs.readFileSync("web/styles.css", "utf8");
+
+  assert.doesNotMatch(script, /acmcoder\.web\.acCounts/);
+  assert.doesNotMatch(script, /localStorage\.getItem\(CACHE_KEYS\.acCounts/);
+  assert.match(script, /body\.result\.status === "AC"/);
+  assert.match(script, /body\.progress/);
+  assert.match(script, /problem\.progress/);
+  assert.match(script, /getAcCount\(problem\)/);
+  assert.match(script, /class="ac-count"/);
+  assert.match(css, /\.ac-count/);
+});
+
+test("web editor skips over already inserted closing brackets", () => {
+  const script = fs.readFileSync("web/app.js", "utf8");
+
+  assert.match(script, /closingPairs/);
+  assert.match(script, /handleEditorBeforeInput/);
+  assert.match(script, /event\.inputType === "insertText"/);
+  assert.match(script, /elements\.code\.value\[elements\.code\.selectionStart\] === event\.key/);
+  assert.match(script, /elements\.code\.value\[elements\.code\.selectionStart\] === event\.data/);
+  assert.match(script, /setSelectionRange\(elements\.code\.selectionStart \+ 1/);
+  assert.match(script, /addEventListener\("beforeinput", handleEditorBeforeInput\)/);
 });

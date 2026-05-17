@@ -46,11 +46,23 @@ http://127.0.0.1:43117
 docker build -t acmcoder-runner:local .
 ```
 
+默认镜像名是 `acmcoder-runner:local`。如果你要换成自己的镜像名，可以设置 `ACMCODER_DOCKER_IMAGE`：
+
+```powershell
+$env:ACMCODER_DOCKER_IMAGE="ghcr.io/your-name/acmcoder-runner:v1"
+```
+
+```bash
+export ACMCODER_DOCKER_IMAGE=ghcr.io/your-name/acmcoder-runner:v1
+```
+
 然后在 CLI 中显式选择 Docker：
 
 ```bash
 node bin/acmcoder.js test two-sum --lang python --file problems/two-sum/templates/main.py --runner docker
 ```
+
+`node bin/acmcoder.js doctor` 会同时展示本地 Java/C++/Python 工具链和 Docker runner 状态，包括 Docker daemon 是否可用、配置的镜像是否已经存在。
 
 Web 页面也可以在运行模式里选择 Docker。Docker 模式会禁用容器网络，并限制 CPU、内存和进程数量。
 
@@ -88,7 +100,14 @@ web                      本地练习页面
 ```bash
 POST http://127.0.0.1:43117/api/memory/pages
 GET  http://127.0.0.1:43117/api/memory/pages?slug=two-sum
+DELETE http://127.0.0.1:43117/api/memory/pages
+GET  http://127.0.0.1:43117/api/memory/export
+DELETE http://127.0.0.1:43117/api/problems
+GET  http://127.0.0.1:43117/api/problems/export
+POST http://127.0.0.1:43117/api/problems/import
 ```
+
+Web 页面会把插件保存的记忆题目和内置种子题目统一显示在题目列表里。点击 `选择题目` 后才会显示复选框；`删除选中` 对记忆题目会改写 `data/memory/pages.jsonl`，对内置种子题会写入本地隐藏记录 `data/memory/deleted-problems.json`，不会删除仓库源码里的种子数据。`导出全部` 会下载 JSON；选择题目后会变成导出选中题目。`导入` 支持导入 `acmcoder-problems-v1` 和旧的 `acmcoder-memory-v1` JSON：记忆题会写回本地记忆文件，内置种子题会解除本地隐藏状态。
 
 设计说明见：
 

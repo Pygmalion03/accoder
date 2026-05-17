@@ -14,8 +14,36 @@ function listen(server) {
   });
 }
 
+function memoryPage(slug, overrides = {}) {
+  return {
+    source: "leetcode",
+    url: `https://leetcode.cn/problems/${slug}/`,
+    slug,
+    frontendId: overrides.frontendId || "",
+    title: overrides.title || slug,
+    difficulty: overrides.difficulty || "easy",
+    tags: overrides.tags || [],
+    sample: overrides.sample || null,
+    content: overrides.content || `content for ${slug}`,
+    capturedAt: overrides.capturedAt || new Date().toISOString(),
+  };
+}
+
+async function saveMemoryPage(port, page) {
+  const response = await fetch(`http://127.0.0.1:${port}/api/memory/pages`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(page),
+  });
+
+  assert.equal(response.status, 201);
+}
+
 test("serves problem metadata over the local API", async () => {
-  const server = createAcmcoderServer();
+  const deletedProblemsFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-problems-")), "deleted-problems.json");
+  const server = createAcmcoderServer({ deletedProblemsFile });
   const port = await listen(server);
 
   try {
@@ -31,7 +59,8 @@ test("serves problem metadata over the local API", async () => {
 });
 
 test("serves one problem by slug", async () => {
-  const server = createAcmcoderServer();
+  const deletedProblemsFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-problems-")), "deleted-problems.json");
+  const server = createAcmcoderServer({ deletedProblemsFile });
   const port = await listen(server);
 
   try {
@@ -129,6 +158,375 @@ test("exposes memory storage location for the extension sidebar", async () => {
     assert.equal(body.file, memoryFile);
   } finally {
     server.close();
+  }
+});
+
+test("deletes selected memory pages in batch", async () => {
+  const memoryFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-memory-")), "pages.jsonl");
+  const currentMemoryFile = path.join(path.dirname(memoryFile), "current.json");
+  const server = createAcmcoderServer({ memoryFile, currentMemoryFile });
+  const port = await listen(server);
+
+  try {
+    await saveMemoryPage(port, memoryPage("alpha", { capturedAt: "2026-05-14T01:00:00.000Z" }));
+    await saveMemoryPage(port, memoryPage("beta", { capturedAt: "2026-05-14T02:00:00.000Z" }));
+    await saveMemoryPage(port, memoryPage("gamma", { capturedAt: "2026-05-14T03:00:00.000Z" }));
+
+    const response = await fetch(`http://127.0.0.1:${port}/api/memory/pages`, {
+      method: "DELETE",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ slugs: ["alpha", "gamma"] }),
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(body.deletedSlugs, ["alpha", "gamma"]);
+    assert.equal(body.pages.length, 1);
+    assert.equal(body.pages[0].slug, "beta");
+
+    const listResponse = await fetch(`http://127.0.0.1:${port}/api/memory/pages`);
+    const listBody = await listResponse.json();
+    assert.deepEqual(
+      listBody.pages.map((page) => page.slug),
+      ["beta"],
+    );
+
+    const currentResponse = await fetch(`http://127.0.0.1:${port}/api/memory/current`);
+    const currentBody = await currentResponse.json();
+    assert.equal(currentBody.page.slug, "beta");
+  } finally {
+    server.close();
+  }
+});
+
+test("exports latest memory pages as downloadable json", async () => {
+  const memoryFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-memory-")), "pages.jsonl");
+  const currentMemoryFile = path.join(path.dirname(memoryFile), "current.json");
+  const server = createAcmcoderServer({ memoryFile, currentMemoryFile });
+  const port = await listen(server);
+
+  try {
+    await saveMemoryPage(port, memoryPage("alpha", { title: "older alpha", capturedAt: "2026-05-14T01:00:00.000Z" }));
+    await saveMemoryPage(port, memoryPage("beta", { title: "beta", capturedAt: "2026-05-14T02:00:00.000Z" }));
+    await saveMemoryPage(port, memoryPage("alpha", { title: "newer alpha", capturedAt: "2026-05-14T03:00:00.000Z" }));
+
+    const response = await fetch(`http://127.0.0.1:${port}/api/memory/export?slugs=alpha`);
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("content-disposition") || "", /attachment/);
+    assert.equal(body.format, "acmcoder-memory-v1");
+    assert.equal(body.pages.length, 1);
+    assert.equal(body.pages[0].slug, "alpha");
+    assert.equal(body.pages[0].title, "newer alpha");
+  } finally {
+    server.close();
+  }
+});
+
+test("deletes selected visible problems including seed and memory entries", async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-problems-"));
+  const memoryFile = path.join(tempDir, "pages.jsonl");
+  const currentMemoryFile = path.join(tempDir, "current.json");
+  const deletedProblemsFile = path.join(tempDir, "deleted-problems.json");
+  const server = createAcmcoderServer({ memoryFile, currentMemoryFile, deletedProblemsFile });
+  const port = await listen(server);
+
+  try {
+    await saveMemoryPage(port, memoryPage("alpha", { capturedAt: "2026-05-14T01:00:00.000Z" }));
+
+    const response = await fetch(`http://127.0.0.1:${port}/api/problems`, {
+      method: "DELETE",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ slugs: ["two-sum", "memory:alpha"] }),
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(body.deletedSlugs, ["two-sum", "memory:alpha"]);
+
+    const listResponse = await fetch(`http://127.0.0.1:${port}/api/problems`);
+    const listBody = await listResponse.json();
+    assert.equal(listBody.problems.some((problem) => problem.slug === "two-sum"), false);
+
+    const memoryResponse = await fetch(`http://127.0.0.1:${port}/api/memory/pages`);
+    const memoryBody = await memoryResponse.json();
+    assert.equal(memoryBody.pages.length, 0);
+  } finally {
+    server.close();
+  }
+});
+
+test("exports selected seed and memory problems as downloadable json", async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-problems-"));
+  const memoryFile = path.join(tempDir, "pages.jsonl");
+  const currentMemoryFile = path.join(tempDir, "current.json");
+  const deletedProblemsFile = path.join(tempDir, "deleted-problems.json");
+  const server = createAcmcoderServer({ memoryFile, currentMemoryFile, deletedProblemsFile });
+  const port = await listen(server);
+
+  try {
+    await saveMemoryPage(port, memoryPage("alpha", { title: "alpha memory", capturedAt: "2026-05-14T01:00:00.000Z" }));
+
+    const response = await fetch(`http://127.0.0.1:${port}/api/problems/export?slugs=two-sum,memory:alpha`);
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("content-disposition") || "", /attachment/);
+    assert.equal(body.format, "acmcoder-problems-v1");
+    assert.deepEqual(
+      body.problems.map((problem) => problem.slug),
+      ["two-sum", "memory:alpha"],
+    );
+  } finally {
+    server.close();
+  }
+});
+
+test("imports exported problems by restoring hidden seeds and saving memory entries", async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-problems-"));
+  const memoryFile = path.join(tempDir, "pages.jsonl");
+  const currentMemoryFile = path.join(tempDir, "current.json");
+  const deletedProblemsFile = path.join(tempDir, "deleted-problems.json");
+  const server = createAcmcoderServer({ memoryFile, currentMemoryFile, deletedProblemsFile });
+  const port = await listen(server);
+
+  try {
+    await fetch(`http://127.0.0.1:${port}/api/problems`, {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ slugs: ["two-sum"] }),
+    });
+
+    const response = await fetch(`http://127.0.0.1:${port}/api/problems/import`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        format: "acmcoder-problems-v1",
+        problems: [
+          { source: "seed", slug: "two-sum" },
+          {
+            source: "memory",
+            slug: "memory:alpha",
+            frontendId: "9001",
+            title: "alpha memory",
+            difficulty: "medium",
+            tags: ["array"],
+            sample: { inputText: "1", outputText: "1" },
+            leetcode: { slug: "alpha", url: "https://leetcode.cn/problems/alpha/" },
+            description: "alpha content",
+            rank: { updatedAt: "2026-05-14T01:00:00.000Z" },
+          },
+        ],
+      }),
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.importedCount, 2);
+    assert.deepEqual(body.restoredSeedSlugs, ["two-sum"]);
+    assert.deepEqual(body.importedMemorySlugs, ["alpha"]);
+
+    const listResponse = await fetch(`http://127.0.0.1:${port}/api/problems`);
+    const listBody = await listResponse.json();
+    assert.equal(listBody.problems.some((problem) => problem.slug === "two-sum"), true);
+
+    const memoryResponse = await fetch(`http://127.0.0.1:${port}/api/memory/pages?slug=alpha`);
+    const memoryBody = await memoryResponse.json();
+    assert.equal(memoryBody.pages.length, 1);
+    assert.equal(memoryBody.pages[0].title, "alpha memory");
+  } finally {
+    server.close();
+  }
+});
+
+test("imports legacy memory export json", async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-problems-"));
+  const memoryFile = path.join(tempDir, "pages.jsonl");
+  const currentMemoryFile = path.join(tempDir, "current.json");
+  const deletedProblemsFile = path.join(tempDir, "deleted-problems.json");
+  const server = createAcmcoderServer({ memoryFile, currentMemoryFile, deletedProblemsFile });
+  const port = await listen(server);
+
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/problems/import`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        format: "acmcoder-memory-v1",
+        pages: [memoryPage("legacy", { title: "legacy memory" })],
+      }),
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.importedCount, 1);
+    assert.deepEqual(body.importedMemorySlugs, ["legacy"]);
+  } finally {
+    server.close();
+  }
+});
+
+test("records accepted progress through run API and exposes it to problems and memory pages", async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-progress-"));
+  const memoryFile = path.join(tempDir, "pages.jsonl");
+  const currentMemoryFile = path.join(tempDir, "current.json");
+  const deletedProblemsFile = path.join(tempDir, "deleted-problems.json");
+  const progressFile = path.join(tempDir, "progress.json");
+  const calls = [];
+  const server = createAcmcoderServer({
+    memoryFile,
+    currentMemoryFile,
+    deletedProblemsFile,
+    progressFile,
+    runSubmission: async (options) => {
+      calls.push(options);
+      return {
+        status: "AC",
+        message: "accepted",
+        stdout: "",
+        stderr: "",
+      };
+    },
+  });
+  const port = await listen(server);
+
+  try {
+    await saveMemoryPage(port, memoryPage("two-sum", { title: "two sum memory" }));
+
+    const firstRun = await fetch(`http://127.0.0.1:${port}/api/run`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        slug: "memory:two-sum",
+        language: "python",
+        code: "print(1)",
+        stdin: "",
+        expected: "",
+        runner: "local",
+      }),
+    });
+    const firstBody = await firstRun.json();
+
+    const secondRun = await fetch(`http://127.0.0.1:${port}/api/run`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        slug: "two-sum",
+        language: "python",
+        code: "print(1)",
+        stdin: "",
+        expected: "",
+        runner: "docker",
+      }),
+    });
+    const secondBody = await secondRun.json();
+
+    assert.equal(firstBody.progress.acCount, 1);
+    assert.equal(secondBody.progress.acCount, 2);
+    assert.deepEqual(
+      calls.map((call) => call.runner),
+      ["local", "docker"],
+    );
+
+    const problemsResponse = await fetch(`http://127.0.0.1:${port}/api/problems`);
+    const problemsBody = await problemsResponse.json();
+    assert.equal(problemsBody.problems.find((problem) => problem.slug === "two-sum").progress.acCount, 2);
+
+    const memoryResponse = await fetch(`http://127.0.0.1:${port}/api/memory/pages?slug=two-sum`);
+    const memoryBody = await memoryResponse.json();
+    assert.equal(memoryBody.pages[0].progress.acCount, 2);
+  } finally {
+    server.close();
+  }
+});
+
+test("exports and imports problem progress idempotently", async () => {
+  const sourceDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-progress-source-"));
+  const sourceServer = createAcmcoderServer({
+    memoryFile: path.join(sourceDir, "pages.jsonl"),
+    currentMemoryFile: path.join(sourceDir, "current.json"),
+    deletedProblemsFile: path.join(sourceDir, "deleted-problems.json"),
+    progressFile: path.join(sourceDir, "progress.json"),
+    runSubmission: async () => ({
+      status: "AC",
+      message: "accepted",
+      stdout: "",
+      stderr: "",
+    }),
+  });
+  const sourcePort = await listen(sourceServer);
+  const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-progress-target-"));
+  const targetServer = createAcmcoderServer({
+    memoryFile: path.join(targetDir, "pages.jsonl"),
+    currentMemoryFile: path.join(targetDir, "current.json"),
+    deletedProblemsFile: path.join(targetDir, "deleted-problems.json"),
+    progressFile: path.join(targetDir, "progress.json"),
+    runSubmission: async () => ({
+      status: "AC",
+      message: "accepted",
+      stdout: "",
+      stderr: "",
+    }),
+  });
+  const targetPort = await listen(targetServer);
+
+  try {
+    for (let index = 0; index < 2; index += 1) {
+      await fetch(`http://127.0.0.1:${sourcePort}/api/run`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ slug: "two-sum", language: "python", code: "print(1)", runner: "local" }),
+      });
+    }
+
+    const exportResponse = await fetch(`http://127.0.0.1:${sourcePort}/api/problems/export?slugs=two-sum`);
+    const exportBody = await exportResponse.json();
+    assert.equal(exportBody.problems[0].progress.acCount, 2);
+
+    for (let index = 0; index < 3; index += 1) {
+      await fetch(`http://127.0.0.1:${targetPort}/api/run`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ slug: "two-sum", language: "python", code: "print(1)", runner: "local" }),
+      });
+    }
+
+    const beforeImport = await fetch(`http://127.0.0.1:${targetPort}/api/problems`);
+    const beforeImportBody = await beforeImport.json();
+    assert.equal(beforeImportBody.problems.find((problem) => problem.slug === "two-sum").progress.acCount, 3);
+
+    const lowerImport = await fetch(`http://127.0.0.1:${targetPort}/api/problems/import`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(exportBody),
+    });
+    const lowerBody = await lowerImport.json();
+    assert.equal(lowerBody.importedProgressCount, 0);
+
+    const afterLowerImport = await fetch(`http://127.0.0.1:${targetPort}/api/problems`);
+    const afterLowerBody = await afterLowerImport.json();
+    assert.equal(afterLowerBody.problems.find((problem) => problem.slug === "two-sum").progress.acCount, 3);
+
+    exportBody.problems[0].progress.acCount = 5;
+    const higherImport = await fetch(`http://127.0.0.1:${targetPort}/api/problems/import`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(exportBody),
+    });
+    const higherBody = await higherImport.json();
+    assert.equal(higherBody.importedProgressCount, 1);
+
+    const afterHigherImport = await fetch(`http://127.0.0.1:${targetPort}/api/problems`);
+    const afterHigherBody = await afterHigherImport.json();
+    assert.equal(afterHigherBody.problems.find((problem) => problem.slug === "two-sum").progress.acCount, 5);
+  } finally {
+    sourceServer.close();
+    targetServer.close();
   }
 });
 

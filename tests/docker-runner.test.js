@@ -6,6 +6,8 @@ import {
   buildDockerArgs,
   classifyDockerUnavailable,
   dockerRunner,
+  getDockerImage,
+  interpretDockerDoctorResult,
   shellQuote,
 } from "../src/runner/docker-runner.js";
 
@@ -40,6 +42,25 @@ test("builds docker run arguments with resource limits and stdin", () => {
   assert.equal(args.at(-3), "bash");
   assert.equal(args.at(-2), "-lc");
   assert.equal(args.at(-1), "'python' '/workspace/main.py'");
+});
+
+test("uses configured Docker runner image when provided", () => {
+  assert.equal(getDockerImage({}), "acmcoder-runner:local");
+  assert.equal(getDockerImage({ ACMCODER_DOCKER_IMAGE: "ghcr.io/pygmalion03/acmcoder-runner:v2" }), "ghcr.io/pygmalion03/acmcoder-runner:v2");
+});
+
+test("builds docker run arguments with configured image", () => {
+  const args = buildDockerArgs({
+    hostWorkdir: "E:\\Projects\\acmcoder\\tmp",
+    image: "custom/acmcoder-runner:test",
+    commandSpec: {
+      command: "python",
+      args: ["/workspace/main.py"],
+    },
+  });
+
+  assert.ok(args.includes("custom/acmcoder-runner:test"));
+  assert.equal(args.includes("acmcoder-runner:local"), false);
 });
 
 test("normalizes Windows-style workspace paths for the Linux container", () => {
@@ -98,4 +119,41 @@ test("repository includes a local docker runner image definition", () => {
   assert.match(dockerfile, /g\+\+/);
   assert.match(dockerfile, /python3/);
   assert.match(dockerfile, /\/usr\/local\/bin\/python/);
+});
+
+test("interprets Docker doctor result when image is ready", () => {
+  const result = interpretDockerDoctorResult({
+    image: "acmcoder-runner:local",
+    dockerResult: { code: 0, stdout: "29.2.1\n", stderr: "" },
+    imageResult: { code: 0, stdout: "[]", stderr: "" },
+  });
+
+  assert.equal(result.ready, true);
+  assert.match(result.message, /image acmcoder-runner:local/);
+});
+
+test("interprets Docker doctor result when image is missing", () => {
+  const result = interpretDockerDoctorResult({
+    image: "acmcoder-runner:local",
+    dockerResult: { code: 0, stdout: "29.2.1\n", stderr: "" },
+    imageResult: { code: 1, stdout: "", stderr: "No such image: acmcoder-runner:local" },
+  });
+
+  assert.equal(result.ready, false);
+  assert.match(result.message, /docker build -t acmcoder-runner:local ./);
+});
+
+test("interprets Docker doctor result when daemon is unavailable", () => {
+  const result = interpretDockerDoctorResult({
+    image: "acmcoder-runner:local",
+    dockerResult: {
+      code: 1,
+      stdout: "",
+      stderr: "Cannot connect to the Docker daemon",
+    },
+    imageResult: null,
+  });
+
+  assert.equal(result.ready, false);
+  assert.match(result.message, /Docker daemon is not running/);
 });

@@ -110,11 +110,55 @@ select {
   gap: 8px;
 }
 
+.memory-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.memory-actions button {
+  min-width: 0;
+  padding: 8px 9px;
+  font-size: 13px;
+  white-space: normal;
+}
+
+button.danger {
+  border-color: var(--bad);
+  background: transparent;
+  color: var(--bad);
+}
+
+button.danger:hover {
+  background: #f3d8d8;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.problem-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+}
+
+.memory-select {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
 .problem-item {
   width: 100%;
   border: 0;
   border-left: 3px solid transparent;
   background: transparent;
+  color: var(--ink);
   padding: 12px 10px;
   text-align: left;
   cursor: pointer;
@@ -129,11 +173,26 @@ select {
 .problem-item strong {
   display: block;
   margin-bottom: 5px;
+  color: var(--ink);
 }
 
-.problem-item span {
+.problem-meta {
   color: var(--muted);
   font-size: 13px;
+}
+
+.problem-item .ac-count {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 8px;
+  border: 1px solid rgba(18, 97, 63, 0.25);
+  border-radius: 999px;
+  background: #d7eadf;
+  color: var(--good);
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .workspace {

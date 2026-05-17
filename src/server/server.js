@@ -4,14 +4,32 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { findProblem, loadProblems, projectRoot, resolveProjectPath } from "../core/problems.js";
+import {
+  deleteProblems,
+  exportProblems,
+  filterVisibleProblems,
+  getDefaultDeletedProblemsFile,
+  importProblems,
+  loadDeletedProblemSlugs,
+} from "./problem-actions.js";
 import { runSubmission as defaultRunSubmission } from "../runner/run.js";
 import {
   getDefaultCurrentMemoryFile,
   getDefaultMemoryFile,
+  deleteMemoryPages,
+  exportMemoryPages,
   loadCurrentMemoryPage,
   loadMemoryPages,
   saveMemoryPage,
 } from "./memory.js";
+import {
+  getDefaultProgressFile,
+  loadProgressItems,
+  progressForSlug,
+  recordAcceptedProgress,
+  withPageProgress,
+  withProblemProgress,
+} from "./progress.js";
 
 const DEFAULT_PORT = 43117;
 
@@ -24,12 +42,21 @@ const contentTypes = {
 
 const corsHeaders = {
   "access-control-allow-origin": "*",
-  "access-control-allow-methods": "GET,POST,OPTIONS",
+  "access-control-allow-methods": "GET,POST,DELETE,OPTIONS",
   "access-control-allow-headers": "content-type",
 };
 
 function sendJson(response, status, payload) {
   response.writeHead(status, { "content-type": "application/json; charset=utf-8", ...corsHeaders });
+  response.end(JSON.stringify(payload, null, 2));
+}
+
+function sendJsonDownload(response, filename, payload) {
+  response.writeHead(200, {
+    "content-type": "application/json; charset=utf-8",
+    "content-disposition": `attachment; filename="${filename}"`,
+    ...corsHeaders,
+  });
   response.end(JSON.stringify(payload, null, 2));
 }
 
@@ -63,6 +90,16 @@ async function serializeProblem(problem, includeCaseText = false) {
     ...problem,
     cases,
   };
+}
+
+async function serializeProblemsWithProgress(problems, progressFile) {
+  const progressItems = await loadProgressItems(progressFile);
+  return problems.map((problem) => withProblemProgress(problem, progressItems));
+}
+
+async function serializePagesWithProgress(pages, progressFile) {
+  const progressItems = await loadProgressItems(progressFile);
+  return pages.map((page) => withPageProgress(page, progressItems));
 }
 
 async function readTemplate(slug, language) {
@@ -104,6 +141,8 @@ async function serveStatic(requestUrl, response) {
 export function createAcmcoderServer(options = {}) {
   const memoryFile = options.memoryFile || getDefaultMemoryFile();
   const currentMemoryFile = options.currentMemoryFile || getDefaultCurrentMemoryFile();
+  const deletedProblemsFile = options.deletedProblemsFile || getDefaultDeletedProblemsFile();
+  const progressFile = options.progressFile || getDefaultProgressFile();
   const runSubmission = options.runSubmission || defaultRunSubmission;
 
   return http.createServer(async (request, response) => {
@@ -116,15 +155,63 @@ export function createAcmcoderServer(options = {}) {
       }
 
       if (request.method === "GET" && requestUrl.pathname === "/api/problems") {
-        const problems = loadProblems();
+        const deletedSlugs = await loadDeletedProblemSlugs(deletedProblemsFile);
+        const problems = await serializeProblemsWithProgress(filterVisibleProblems(loadProblems(), deletedSlugs), progressFile);
         sendJson(response, 200, { problems });
+        return;
+      }
+
+      if (request.method === "DELETE" && requestUrl.pathname === "/api/problems") {
+        const body = await readJsonBody(request);
+        const result = await deleteProblems({
+          slugs: body.slugs || [],
+          problems: loadProblems(),
+          memoryFile,
+          currentMemoryFile,
+          deletedProblemsFile,
+          progressFile,
+        });
+        sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "POST" && requestUrl.pathname === "/api/problems/import") {
+        const body = await readJsonBody(request);
+        const result = await importProblems({
+          payload: body,
+          problems: loadProblems(),
+          memoryFile,
+          currentMemoryFile,
+          deletedProblemsFile,
+          progressFile,
+        });
+        sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "GET" && requestUrl.pathname === "/api/problems/export") {
+        const slugs = (requestUrl.searchParams.get("slugs") || "").split(",");
+        const body = await exportProblems({
+          slugs,
+          problems: loadProblems(),
+          memoryFile,
+          deletedProblemsFile,
+          progressFile,
+        });
+        sendJsonDownload(response, `acmcoder-problems-${new Date().toISOString().slice(0, 10)}.json`, body);
         return;
       }
 
       const problemMatch = requestUrl.pathname.match(/^\/api\/problems\/([^/]+)$/);
       if (request.method === "GET" && problemMatch) {
-        const problem = findProblem(decodeURIComponent(problemMatch[1]));
-        sendJson(response, 200, { problem: await serializeProblem(problem, true) });
+        const slug = decodeURIComponent(problemMatch[1]);
+        const deletedSlugs = await loadDeletedProblemSlugs(deletedProblemsFile);
+        if (deletedSlugs.has(slug)) {
+          throw new Error(`Unknown problem: ${slug}`);
+        }
+        const problem = await serializeProblem(findProblem(slug), true);
+        const progressItems = await loadProgressItems(progressFile);
+        sendJson(response, 200, { problem: withProblemProgress(problem, progressItems) });
         return;
       }
 
@@ -145,13 +232,32 @@ export function createAcmcoderServer(options = {}) {
           timeoutMs: body.timeoutMs,
           runner: body.runner,
         });
-        sendJson(response, 200, { result });
+        const progress =
+          result.status === "AC"
+            ? await recordAcceptedProgress(body.slug, progressFile)
+            : progressForSlug(body.slug, await loadProgressItems(progressFile));
+        sendJson(response, 200, { result, progress });
         return;
       }
 
       if (request.method === "GET" && requestUrl.pathname === "/api/memory/pages") {
         const pages = await loadMemoryPages({ slug: requestUrl.searchParams.get("slug") }, memoryFile);
-        sendJson(response, 200, { pages });
+        sendJson(response, 200, { pages: await serializePagesWithProgress(pages, progressFile) });
+        return;
+      }
+
+      if (request.method === "DELETE" && requestUrl.pathname === "/api/memory/pages") {
+        const body = await readJsonBody(request);
+        const result = await deleteMemoryPages({ slugs: body.slugs || [] }, memoryFile, currentMemoryFile);
+        sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "GET" && requestUrl.pathname === "/api/memory/export") {
+        const slugs = (requestUrl.searchParams.get("slugs") || "").split(",");
+        const body = await exportMemoryPages({ slugs }, memoryFile);
+        body.pages = await serializePagesWithProgress(body.pages, progressFile);
+        sendJsonDownload(response, `acmcoder-memory-${new Date().toISOString().slice(0, 10)}.json`, body);
         return;
       }
 
@@ -162,14 +268,16 @@ export function createAcmcoderServer(options = {}) {
 
       if (request.method === "GET" && requestUrl.pathname === "/api/memory/current") {
         const page = await loadCurrentMemoryPage(currentMemoryFile);
-        sendJson(response, 200, { page });
+        const pages = page ? await serializePagesWithProgress([page], progressFile) : [];
+        sendJson(response, 200, { page: pages[0] || null });
         return;
       }
 
       if (request.method === "POST" && requestUrl.pathname === "/api/memory/pages") {
         const body = await readJsonBody(request);
         const page = await saveMemoryPage(body, memoryFile, currentMemoryFile);
-        sendJson(response, 201, { page });
+        const pages = await serializePagesWithProgress([page], progressFile);
+        sendJson(response, 201, { page: pages[0] });
         return;
       }
 

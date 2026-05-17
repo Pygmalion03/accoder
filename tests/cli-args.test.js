@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 
 import { parseCliArgs } from "../src/cli/args.js";
 
@@ -36,4 +37,11 @@ test("parses optional runner mode", () => {
       runner: "docker",
     },
   });
+});
+
+test("doctor reports Docker runner status", () => {
+  const script = fs.readFileSync("bin/acmcoder.js", "utf8");
+
+  assert.match(script, /checkDockerRunner/);
+  assert.match(script, /Docker runner:/);
 });
