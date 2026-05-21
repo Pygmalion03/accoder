@@ -5,6 +5,14 @@ import { pathToFileURL } from "node:url";
 
 import { findProblem, loadProblems, projectRoot, resolveProjectPath } from "../core/problems.js";
 import {
+  getDefaultAssistSettingsFile,
+  getPublicAssistSettings,
+  loadAssistSettings,
+  requestCodeAdvice,
+  saveAssistSettings,
+} from "./assist.js";
+import { createEnvironmentReport } from "./doctor.js";
+import {
   deleteProblems,
   exportProblems,
   filterVisibleProblems,
@@ -30,6 +38,8 @@ import {
   withPageProgress,
   withProblemProgress,
 } from "./progress.js";
+import { checkDockerRunner as defaultCheckDockerRunner } from "../runner/docker-runner.js";
+import { checkToolchain as defaultCheckToolchain, listLanguages as defaultListLanguages } from "../runner/toolchains.js";
 
 const DEFAULT_PORT = 43117;
 
@@ -143,7 +153,12 @@ export function createAcmcoderServer(options = {}) {
   const currentMemoryFile = options.currentMemoryFile || getDefaultCurrentMemoryFile();
   const deletedProblemsFile = options.deletedProblemsFile || getDefaultDeletedProblemsFile();
   const progressFile = options.progressFile || getDefaultProgressFile();
+  const assistSettingsFile = options.assistSettingsFile || getDefaultAssistSettingsFile();
   const runSubmission = options.runSubmission || defaultRunSubmission;
+  const assistFetch = options.assistFetch || globalThis.fetch;
+  const listLanguages = options.listLanguages || defaultListLanguages;
+  const checkToolchain = options.checkToolchain || defaultCheckToolchain;
+  const checkDockerRunner = options.checkDockerRunner || defaultCheckDockerRunner;
 
   return http.createServer(async (request, response) => {
     const requestUrl = new URL(request.url, "http://127.0.0.1");
@@ -158,6 +173,41 @@ export function createAcmcoderServer(options = {}) {
         const deletedSlugs = await loadDeletedProblemSlugs(deletedProblemsFile);
         const problems = await serializeProblemsWithProgress(filterVisibleProblems(loadProblems(), deletedSlugs), progressFile);
         sendJson(response, 200, { problems });
+        return;
+      }
+
+      if (request.method === "GET" && requestUrl.pathname === "/api/doctor") {
+        const report = await createEnvironmentReport({
+          listLanguages,
+          checkToolchain,
+          checkDockerRunner,
+        });
+        sendJson(response, 200, report);
+        return;
+      }
+
+      if (request.method === "GET" && requestUrl.pathname === "/api/assist/settings") {
+        const settings = await loadAssistSettings(assistSettingsFile);
+        sendJson(response, 200, { settings: getPublicAssistSettings(settings) });
+        return;
+      }
+
+      if (request.method === "POST" && requestUrl.pathname === "/api/assist/settings") {
+        const body = await readJsonBody(request);
+        const settings = await saveAssistSettings(body, assistSettingsFile);
+        sendJson(response, 200, { settings: getPublicAssistSettings(settings) });
+        return;
+      }
+
+      if (request.method === "POST" && requestUrl.pathname === "/api/assist") {
+        const body = await readJsonBody(request);
+        const settings = await loadAssistSettings(assistSettingsFile);
+        const advice = await requestCodeAdvice({
+          settings,
+          fetch: assistFetch,
+          context: body,
+        });
+        sendJson(response, 200, advice);
         return;
       }
 
@@ -293,14 +343,18 @@ export function createAcmcoderServer(options = {}) {
   });
 }
 
-export function startServer(port = DEFAULT_PORT) {
+export function getServerHost(env = process.env) {
+  return env.ACMCODER_HOST?.trim() || "127.0.0.1";
+}
+
+export function startServer(port = DEFAULT_PORT, host = getServerHost()) {
   const server = createAcmcoderServer();
-  server.listen(port, "127.0.0.1", () => {
-    console.log(`ACMCoder is running at http://127.0.0.1:${port}`);
+  server.listen(port, host, () => {
+    console.log(`ACMCoder is running at http://${host}:${port}`);
   });
   return server;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  startServer(Number(process.env.PORT || DEFAULT_PORT));
+  startServer(Number(process.env.PORT || DEFAULT_PORT), getServerHost(process.env));
 }

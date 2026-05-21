@@ -376,6 +376,25 @@ pre {
   color: var(--bad);
 }
 
+.runner-health {
+  border-left: 3px solid var(--line);
+  padding-left: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.runner-health.ok {
+  border-left-color: var(--good);
+  color: var(--good);
+}
+
+.runner-health.warn,
+.runner-health.error {
+  border-left-color: var(--bad);
+  color: var(--bad);
+}
+
 .run-status {
   border-radius: 999px;
   background: #ddd7cc;
@@ -414,6 +433,29 @@ pre {
 
 .settings[open] {
   padding-bottom: 12px;
+}
+
+.assist-panel {
+  display: grid;
+  gap: 9px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.assist-panel summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.assist-panel textarea {
+  min-height: 84px;
+  resize: vertical;
+  padding: 10px;
+  line-height: 1.45;
+}
+
+.assist-answer {
+  max-height: 220px;
 }
 
 .hint {

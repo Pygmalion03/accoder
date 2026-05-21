@@ -88,6 +88,7 @@
                 <button id="load-template" type="button">还原初始代码</button>
                 <button id="run" type="button">Run</button>
               </div>
+              <p id="runner-health" class="runner-health">检测运行环境...</p>
               <label class="editor-label" for="code">代码</label>
               <div class="code-editor" id="code-editor">
                 <div id="line-numbers" class="line-numbers" aria-hidden="true">1</div>
@@ -96,6 +97,30 @@
                   <textarea id="code" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea>
                 </div>
               </div>
+              <details class="assist-panel">
+                <summary>模型建议（可选）</summary>
+                <div class="assist-settings">
+                  <label>
+                    API Key
+                    <input id="assist-key" type="password" placeholder="只保存在本机 data/memory/settings.json" />
+                  </label>
+                  <label>
+                    Base URL
+                    <input id="assist-base-url" type="url" placeholder="https://api.openai.com/v1" />
+                  </label>
+                  <label>
+                    Model
+                    <input id="assist-model" type="text" placeholder="gpt-4.1-mini" />
+                  </label>
+                  <button id="save-assist-settings" type="button" class="secondary">保存模型设置</button>
+                </div>
+                <label>
+                  想问模型什么
+                  <textarea id="assist-question" placeholder="请看一下我的代码，指出可能的问题和修改建议。" spellcheck="false"></textarea>
+                </label>
+                <button id="ask-assist" type="button">询问模型</button>
+                <pre id="assist-answer" class="assist-answer"></pre>
+              </details>
             </section>
 
             <section class="result-panel">

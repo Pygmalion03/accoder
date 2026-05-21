@@ -90,6 +90,7 @@ label {
 }
 
 .search input,
+.assist-panel input,
 select,
 textarea {
   width: 100%;
@@ -100,6 +101,7 @@ textarea {
 }
 
 .search input,
+.assist-panel input,
 select {
   height: 40px;
   padding: 0 10px;
@@ -128,6 +130,15 @@ button.danger {
   border-color: var(--bad);
   background: transparent;
   color: var(--bad);
+}
+
+button.secondary {
+  background: transparent;
+  color: var(--accent);
+}
+
+button.secondary:hover {
+  background: #e6f0eb;
 }
 
 button.danger:hover {
@@ -276,6 +287,48 @@ button:hover,
 .result-panel {
   display: grid;
   gap: 12px;
+}
+
+.runner-health {
+  border-left: 3px solid var(--line);
+  padding-left: 9px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.runner-health.ok {
+  border-left-color: var(--good);
+  color: var(--good);
+}
+
+.runner-health.warn,
+.runner-health.error {
+  border-left-color: var(--bad);
+  color: var(--bad);
+}
+
+.assist-panel {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.assist-panel summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.assist-settings {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(160px, 1.2fr) minmax(120px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.assist-answer {
+  max-height: 260px;
 }
 
 .toolbar {
@@ -478,6 +531,10 @@ pre {
   }
 
   .toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .assist-settings {
     grid-template-columns: 1fr;
   }
 }

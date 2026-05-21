@@ -68,6 +68,34 @@ node bin/acmcoder.js test two-sum --lang python --file problems/two-sum/template
 
 Web 页面也可以在运行模式里选择 Docker。Docker 模式会禁用容器网络，并限制 CPU、内存和进程数量。
 
+## Docker Compose 应用启动
+
+如果用户只有 Docker，没有 Node.js、Java、C++ 或 Python，可以直接启动应用容器：
+
+```bash
+docker compose up --build
+```
+
+然后打开：
+
+```text
+http://127.0.0.1:43117
+```
+
+这时 Web 服务和运行工具链都在容器内，页面里选择 Local runner 即可运行代码。记忆题目、AC 次数和模型设置会保存在宿主机的 `data/memory` 目录。
+
+更完整的部署现状和限制见：
+
+```text
+docs/deployment.md
+```
+
+## 环境扫描与模型建议
+
+Web 页面和 Edge 侧边栏会调用 `/api/doctor` 显示 Python、Java、C++ 与 Docker runner 状态，并在用户还没有手动选择运行模式时按当前语言给出推荐。
+
+模型建议是可选能力，不参与判题，也不会覆盖源代码。用户可以在页面里填写 API Key、Base URL 和 Model，服务端会通过 OpenAI-compatible `chat/completions` 接口请求建议。设置保存在 `data/memory/settings.json`，也可以通过 `ACMCODER_LLM_API_KEY`、`ACMCODER_LLM_BASE_URL`、`ACMCODER_LLM_MODEL` 配置。
+
 ## CLI
 
 ```bash

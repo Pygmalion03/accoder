@@ -4,6 +4,8 @@ const state = {
   lastMemoryCapturedAt: "",
   selectionMode: false,
   selectedProblemIds: new Set(),
+  environment: null,
+  runnerUserConfigured: false,
 };
 
 const CACHE_KEYS = {
@@ -70,6 +72,7 @@ const elements = {
   description: document.querySelector("#problem-description"),
   language: document.querySelector("#language"),
   runner: document.querySelector("#runner"),
+  runnerHealth: document.querySelector("#runner-health"),
   loadTemplate: document.querySelector("#load-template"),
   run: document.querySelector("#run"),
   lineNumbers: document.querySelector("#line-numbers"),
@@ -83,6 +86,13 @@ const elements = {
   message: document.querySelector("#message"),
   stdout: document.querySelector("#stdout"),
   stderr: document.querySelector("#stderr"),
+  assistKey: document.querySelector("#assist-key"),
+  assistBaseUrl: document.querySelector("#assist-base-url"),
+  assistModel: document.querySelector("#assist-model"),
+  saveAssistSettings: document.querySelector("#save-assist-settings"),
+  assistQuestion: document.querySelector("#assist-question"),
+  askAssist: document.querySelector("#ask-assist"),
+  assistAnswer: document.querySelector("#assist-answer"),
 };
 
 const keywords = {
@@ -189,6 +199,137 @@ async function getJson(url, options) {
     throw new Error(body.error || `Request failed: ${response.status}`);
   }
   return body;
+}
+
+function currentToolchainStatus() {
+  return state.environment?.local?.[elements.language.value] || null;
+}
+
+function currentRunnerRecommendation() {
+  return state.environment?.recommendedRunnerByLanguage?.[elements.language.value] || "";
+}
+
+function setRunnerHealth(message, kind = "") {
+  elements.runnerHealth.textContent = message;
+  elements.runnerHealth.className = `runner-health ${kind}`.trim();
+}
+
+function renderRunnerHealth() {
+  if (!state.environment) {
+    setRunnerHealth("尚未检测运行环境。");
+    return;
+  }
+
+  const local = currentToolchainStatus();
+  const docker = state.environment.docker;
+  const runner = elements.runner.value;
+  const recommendation = currentRunnerRecommendation();
+  const suffix = recommendation && recommendation !== runner ? ` 推荐：${recommendation === "docker" ? "Docker" : "Local"}。` : "";
+
+  if (runner === "docker") {
+    setRunnerHealth(docker.ready ? `Docker 可用。${docker.message}` : `Docker 不可用：${docker.message}`, docker.ready ? "ok" : "warn");
+    return;
+  }
+
+  if (local?.ready) {
+    setRunnerHealth(`${local.label} 本地环境可用。${suffix}`, "ok");
+    return;
+  }
+
+  const missingCommands = local?.missingCommands?.join(", ") || "对应工具链";
+  const dockerHint = docker?.ready ? "可以切换 Docker。" : "Docker 当前也不可用。";
+  setRunnerHealth(`Local 缺少 ${missingCommands}；${dockerHint}${suffix}`, "warn");
+}
+
+function applyRecommendedRunnerIfNeeded() {
+  if (state.runnerUserConfigured) {
+    return;
+  }
+
+  const recommendedRunner = currentRunnerRecommendation();
+  if (recommendedRunner && recommendedRunner !== elements.runner.value) {
+    elements.runner.value = recommendedRunner;
+  }
+}
+
+async function loadDoctor(options = {}) {
+  try {
+    state.environment = await getJson("/api/doctor");
+    if (options.applyDefault) {
+      applyRecommendedRunnerIfNeeded();
+    }
+    renderRunnerHealth();
+  } catch (error) {
+    setRunnerHealth(`环境检测失败：${error.message}`, "warn");
+  }
+}
+
+function setAssistAnswer(message, kind = "") {
+  elements.assistAnswer.textContent = message;
+  elements.assistAnswer.className = `assist-answer ${kind}`.trim();
+}
+
+async function loadAssistSettings() {
+  const body = await getJson("/api/assist/settings");
+  elements.assistBaseUrl.value = body.settings?.baseUrl || "";
+  elements.assistModel.value = body.settings?.model || "";
+  elements.assistKey.placeholder = body.settings?.configured
+    ? "已保存；留空则保留当前 Key"
+    : "只保存在本机 data/memory/settings.json";
+}
+
+async function saveAssistSettings() {
+  const payload = {
+    baseUrl: elements.assistBaseUrl.value,
+    model: elements.assistModel.value,
+  };
+  const apiKey = elements.assistKey.value.trim();
+  if (apiKey) {
+    payload.apiKey = apiKey;
+  }
+
+  const body = await getJson("/api/assist/settings", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  elements.assistKey.value = "";
+  elements.assistKey.placeholder = body.settings?.configured ? "已保存；留空则保留当前 Key" : "只保存在本机 data/memory/settings.json";
+  setAssistAnswer("模型设置已保存。", "ok");
+}
+
+async function askAssist() {
+  elements.askAssist.disabled = true;
+  setAssistAnswer("正在请求模型...");
+
+  try {
+    const body = await getJson("/api/assist", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        problemTitle: state.selected?.title,
+        problemDescription: state.selected?.description,
+        language: elements.language.value,
+        code: elements.code.value,
+        stdin: elements.stdin.value,
+        expected: elements.expected.value,
+        status: elements.status.textContent,
+        stdout: elements.stdout.textContent,
+        stderr: elements.stderr.textContent,
+        question: elements.assistQuestion.value,
+      }),
+    });
+    setAssistAnswer(body.message || "模型没有返回建议。", "ok");
+  } catch (error) {
+    setAssistAnswer(error.message, "error");
+  } finally {
+    elements.askAssist.disabled = false;
+  }
 }
 
 function problemCacheKey(problem = state.selected) {
@@ -838,7 +979,13 @@ async function init() {
   const body = await getJson("/api/problems");
   state.problems = body.problems;
   elements.language.value = localStorage.getItem(CACHE_KEYS.language) || elements.language.value;
-  elements.runner.value = localStorage.getItem(CACHE_KEYS.runner) || elements.runner.value;
+  const savedRunner = localStorage.getItem(CACHE_KEYS.runner);
+  state.runnerUserConfigured = Boolean(savedRunner);
+  elements.runner.value = savedRunner || elements.runner.value;
+  await loadDoctor({ applyDefault: true });
+  await loadAssistSettings().catch((error) => {
+    setAssistAnswer(`模型设置读取失败：${error.message}`, "error");
+  });
   elements.search.addEventListener("input", renderProblemList);
   elements.selectProblems.addEventListener("click", () => {
     state.selectionMode = !state.selectionMode;
@@ -871,13 +1018,21 @@ async function init() {
   });
   elements.language.addEventListener("change", async () => {
     localStorage.setItem(CACHE_KEYS.language, elements.language.value);
+    applyRecommendedRunnerIfNeeded();
+    renderRunnerHealth();
     if (!restoreWorkspaceCache()) {
       await loadTemplate();
     }
   });
   elements.runner.addEventListener("change", () => {
+    state.runnerUserConfigured = true;
     localStorage.setItem(CACHE_KEYS.runner, elements.runner.value);
+    renderRunnerHealth();
   });
+  elements.saveAssistSettings.addEventListener("click", () => {
+    saveAssistSettings().catch((error) => setAssistAnswer(error.message, "error"));
+  });
+  elements.askAssist.addEventListener("click", askAssist);
   elements.loadTemplate.addEventListener("click", loadTemplate);
   elements.sampleIo.addEventListener("click", () => {
     restoreSampleIo();

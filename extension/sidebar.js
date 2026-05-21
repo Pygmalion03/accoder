@@ -1,7 +1,6 @@
 const LOCAL_BASE = "http://127.0.0.1:43117";
 const STORAGE_KEYS = {
   memoryMode: "acmcoder.memoryMode",
-  llmApiKey: "acmcoder.llmApiKey",
   lastPage: "acmcoder.lastPage",
   language: "acmcoder.sidebar.language",
   runner: "acmcoder.sidebar.runner",
@@ -149,6 +148,8 @@ const types = new Set([
 ]);
 
 let capturedPage = null;
+let environment = null;
+let runnerUserConfigured = false;
 
 const elements = {
   memoryMode: document.querySelector("#memory-mode"),
@@ -159,8 +160,14 @@ const elements = {
   slug: document.querySelector("#slug"),
   tags: document.querySelector("#tags"),
   acCount: document.querySelector("#ac-count"),
-  llmKey: document.querySelector("#llm-key"),
-  saveKey: document.querySelector("#save-key"),
+  runnerHealth: document.querySelector("#runner-health"),
+  assistKey: document.querySelector("#assist-key"),
+  assistBaseUrl: document.querySelector("#assist-base-url"),
+  assistModel: document.querySelector("#assist-model"),
+  saveAssistSettings: document.querySelector("#save-assist-settings"),
+  assistQuestion: document.querySelector("#assist-question"),
+  askAssist: document.querySelector("#ask-assist"),
+  assistAnswer: document.querySelector("#assist-answer"),
   memoryFile: document.querySelector("#memory-file"),
   openLocal: document.querySelector("#open-local"),
   language: document.querySelector("#language"),
@@ -190,6 +197,74 @@ function setRunResult(result) {
   elements.message.textContent = result.message || "";
   elements.stdout.textContent = result.stdout || "";
   elements.stderr.textContent = result.stderr || "";
+}
+
+function setRunnerHealth(message, kind = "") {
+  elements.runnerHealth.textContent = message;
+  elements.runnerHealth.className = `runner-health ${kind}`.trim();
+}
+
+function currentToolchainStatus() {
+  return environment?.local?.[elements.language.value] || null;
+}
+
+function currentRunnerRecommendation() {
+  return environment?.recommendedRunnerByLanguage?.[elements.language.value] || "";
+}
+
+function renderRunnerHealth() {
+  if (!environment) {
+    setRunnerHealth("尚未检测运行环境。");
+    return;
+  }
+
+  const local = currentToolchainStatus();
+  const docker = environment.docker;
+  const runner = elements.runner.value;
+  const recommendation = currentRunnerRecommendation();
+  const suffix = recommendation && recommendation !== runner ? ` 推荐：${recommendation === "docker" ? "Docker" : "Local"}。` : "";
+
+  if (runner === "docker") {
+    setRunnerHealth(docker.ready ? `Docker 可用。${docker.message}` : `Docker 不可用：${docker.message}`, docker.ready ? "ok" : "warn");
+    return;
+  }
+
+  if (local?.ready) {
+    setRunnerHealth(`${local.label} 本地环境可用。${suffix}`, "ok");
+    return;
+  }
+
+  const missingCommands = local?.missingCommands?.join(", ") || "对应工具链";
+  const dockerHint = docker?.ready ? "可以切换 Docker。" : "Docker 当前也不可用。";
+  setRunnerHealth(`Local 缺少 ${missingCommands}；${dockerHint}${suffix}`, "warn");
+}
+
+function applyRecommendedRunnerIfNeeded() {
+  if (runnerUserConfigured) {
+    return;
+  }
+
+  const recommendedRunner = currentRunnerRecommendation();
+  if (recommendedRunner && recommendedRunner !== elements.runner.value) {
+    elements.runner.value = recommendedRunner;
+  }
+}
+
+async function loadDoctor(options = {}) {
+  try {
+    environment = await getJson(`${LOCAL_BASE}/api/doctor`);
+    if (options.applyDefault) {
+      applyRecommendedRunnerIfNeeded();
+    }
+    renderRunnerHealth();
+  } catch (error) {
+    setRunnerHealth(`环境检测失败：${error.message}`, "warn");
+  }
+}
+
+function setAssistAnswer(message, kind = "") {
+  elements.assistAnswer.textContent = message;
+  elements.assistAnswer.className = `assist-answer ${kind}`.trim();
 }
 
 function storageGet(keys) {
@@ -548,26 +623,85 @@ async function loadMemoryLocation() {
 }
 
 async function loadSettings() {
-  const values = await storageGet([STORAGE_KEYS.memoryMode, STORAGE_KEYS.llmApiKey, STORAGE_KEYS.language, STORAGE_KEYS.runner]);
+  const values = await storageGet([STORAGE_KEYS.memoryMode, STORAGE_KEYS.language, STORAGE_KEYS.runner]);
   elements.memoryMode.checked = Boolean(values[STORAGE_KEYS.memoryMode]);
-  elements.llmKey.value = values[STORAGE_KEYS.llmApiKey] || "";
   elements.language.value = values[STORAGE_KEYS.language] || elements.language.value;
+  runnerUserConfigured = Boolean(values[STORAGE_KEYS.runner]);
   elements.runner.value = values[STORAGE_KEYS.runner] || elements.runner.value;
 }
 
-async function saveSettings() {
-  await storageSet({
+async function saveSettings(options = {}) {
+  const values = {
     [STORAGE_KEYS.memoryMode]: elements.memoryMode.checked,
     [STORAGE_KEYS.language]: elements.language.value,
-    [STORAGE_KEYS.runner]: elements.runner.value,
-  });
+  };
+
+  if (options.includeRunner !== false) {
+    values[STORAGE_KEYS.runner] = elements.runner.value;
+  }
+
+  await storageSet(values);
+}
+
+async function loadAssistSettings() {
+  const body = await getJson(`${LOCAL_BASE}/api/assist/settings`);
+  elements.assistBaseUrl.value = body.settings?.baseUrl || "";
+  elements.assistModel.value = body.settings?.model || "";
+  elements.assistKey.placeholder = body.settings?.configured ? "已保存；留空则保留当前 Key" : "只保存到本机服务";
 }
 
 async function saveApiKey() {
-  await storageSet({
-    [STORAGE_KEYS.llmApiKey]: elements.llmKey.value.trim(),
+  const payload = {
+    baseUrl: elements.assistBaseUrl.value,
+    model: elements.assistModel.value,
+  };
+  const apiKey = elements.assistKey.value.trim();
+  if (apiKey) {
+    payload.apiKey = apiKey;
+  }
+
+  const body = await getJson(`${LOCAL_BASE}/api/assist/settings`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(payload),
   });
-  setStatus("LLM API Key 已保存到浏览器本地存储。", "ok");
+
+  elements.assistKey.value = "";
+  elements.assistKey.placeholder = body.settings?.configured ? "已保存；留空则保留当前 Key" : "只保存到本机服务";
+  setStatus("模型设置已保存到本机服务。", "ok");
+}
+
+async function askAssist() {
+  elements.askAssist.disabled = true;
+  setAssistAnswer("正在请求模型...");
+
+  try {
+    const body = await getJson(`${LOCAL_BASE}/api/assist`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        problemTitle: capturedPage?.title,
+        problemDescription: capturedPage?.content,
+        language: elements.language.value,
+        code: elements.code.value,
+        stdin: elements.stdin.value,
+        expected: elements.expected.value,
+        status: elements.runStatus.textContent,
+        stdout: elements.stdout.textContent,
+        stderr: elements.stderr.textContent,
+        question: elements.assistQuestion.value,
+      }),
+    });
+    setAssistAnswer(body.message || "模型没有返回建议。", "ok");
+  } catch (error) {
+    setAssistAnswer(error.message, "error");
+  } finally {
+    elements.askAssist.disabled = false;
+  }
 }
 
 function replaceSelection(nextText, selectionOffset = nextText.length) {
@@ -689,7 +823,9 @@ function handleEditorBeforeInput(event) {
 async function handleLanguageChange() {
   const stdin = elements.stdin.value;
   const expected = elements.expected.value;
-  await saveSettings();
+  applyRecommendedRunnerIfNeeded();
+  renderRunnerHealth();
+  await saveSettings({ includeRunner: runnerUserConfigured });
   const restored = await restoreWorkspaceCache();
   if (!restored) {
     resetCode({ persist: false });
@@ -707,17 +843,24 @@ async function runAction(action) {
   }
 }
 
-elements.memoryMode.addEventListener("change", () => runAction(saveSettings));
+elements.memoryMode.addEventListener("change", () => runAction(() => saveSettings({ includeRunner: runnerUserConfigured })));
 elements.capture.addEventListener("click", () => runAction(captureCurrentProblem));
 elements.save.addEventListener("click", () => runAction(saveCapturedPage));
-elements.saveKey.addEventListener("click", () => runAction(saveApiKey));
+elements.saveAssistSettings.addEventListener("click", () => runAction(saveApiKey));
 elements.openLocal.addEventListener("click", () => {
   chrome.tabs.create({ url: LOCAL_BASE });
 });
 elements.language.addEventListener("change", () => runAction(handleLanguageChange));
-elements.runner.addEventListener("change", () => runAction(saveSettings));
+elements.runner.addEventListener("change", () =>
+  runAction(async () => {
+    runnerUserConfigured = true;
+    await saveSettings();
+    renderRunnerHealth();
+  }),
+);
 elements.resetCode.addEventListener("click", () => resetCode());
 elements.sampleIo.addEventListener("click", restoreSampleIo);
+elements.askAssist.addEventListener("click", askAssist);
 elements.runCode.addEventListener("click", runCode);
 elements.code.addEventListener("input", () => {
   syncHighlight();
@@ -732,6 +875,8 @@ elements.expected.addEventListener("input", () => void saveWorkspaceCache());
 runAction(async () => {
   await markPanelOpened();
   await loadSettings();
+  await loadDoctor({ applyDefault: true });
+  await loadAssistSettings().catch((error) => setAssistAnswer(`模型设置读取失败：${error.message}`, "error"));
   await loadCachedPage();
   await loadMemoryLocation();
   syncHighlight();

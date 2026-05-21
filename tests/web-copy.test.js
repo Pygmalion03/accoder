@@ -94,6 +94,43 @@ test("web UI exposes local and docker runner modes", () => {
   assert.match(css, /\.status\.NO_RUNNER/);
 });
 
+test("web UI shows environment doctor status for runner modes", () => {
+  const html = fs.readFileSync("web/index.html", "utf8");
+  const script = fs.readFileSync("web/app.js", "utf8");
+  const css = fs.readFileSync("web/styles.css", "utf8");
+
+  assert.match(html, /id="runner-health"/);
+  assert.match(script, /api\/doctor/);
+  assert.match(script, /recommendedRunnerByLanguage/);
+  assert.match(script, /renderRunnerHealth/);
+  assert.match(script, /missingCommands/);
+  assert.match(css, /\.runner-health/);
+  assert.match(css, /\.runner-health\.warn/);
+});
+
+test("web UI exposes lightweight optional model advice", () => {
+  const html = fs.readFileSync("web/index.html", "utf8");
+  const script = fs.readFileSync("web/app.js", "utf8");
+  const css = fs.readFileSync("web/styles.css", "utf8");
+
+  assert.match(html, /id="assist-key"/);
+  assert.match(html, /id="assist-base-url"/);
+  assert.match(html, /id="assist-model"/);
+  assert.match(html, /id="save-assist-settings"/);
+  assert.match(html, /id="assist-question"/);
+  assert.match(html, /id="assist-question"[^>]*placeholder="请看一下我的代码，指出可能的问题和修改建议。"[^>]*><\/textarea>/);
+  assert.doesNotMatch(html, /<textarea id="assist-question"[^>]*>请看一下我的代码/);
+  assert.match(html, /id="ask-assist"/);
+  assert.match(html, /id="assist-answer"/);
+  assert.match(script, /api\/assist\/settings/);
+  assert.match(script, /api\/assist/);
+  assert.match(script, /askAssist/);
+  assert.match(script, /saveAssistSettings/);
+  assert.match(script, /problemTitle:\s*state\.selected\?\.title/);
+  assert.match(css, /\.assist-panel/);
+  assert.match(css, /\.assist-answer/);
+});
+
 test("web UI exposes problem selection, batch delete, and export controls", () => {
   const html = fs.readFileSync("web/index.html", "utf8");
   const script = fs.readFileSync("web/app.js", "utf8");

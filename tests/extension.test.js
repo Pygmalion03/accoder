@@ -119,6 +119,42 @@ test("sidebar can run code through the local runner", () => {
   assert.match(css, /\.run-status\.NO_RUNNER/);
 });
 
+test("sidebar shows runner environment status from the local doctor API", () => {
+  const html = fs.readFileSync("extension/sidebar.html", "utf8");
+  const css = fs.readFileSync("extension/sidebar.css", "utf8");
+  const script = fs.readFileSync("extension/sidebar.js", "utf8");
+
+  assert.match(html, /id="runner-health"/);
+  assert.match(script, /api\/doctor/);
+  assert.match(script, /recommendedRunnerByLanguage/);
+  assert.match(script, /renderRunnerHealth/);
+  assert.match(script, /missingCommands/);
+  assert.match(css, /\.runner-health/);
+  assert.match(css, /\.runner-health\.warn/);
+});
+
+test("sidebar exposes lightweight optional model advice through the local service", () => {
+  const html = fs.readFileSync("extension/sidebar.html", "utf8");
+  const css = fs.readFileSync("extension/sidebar.css", "utf8");
+  const script = fs.readFileSync("extension/sidebar.js", "utf8");
+
+  assert.match(html, /id="assist-key"/);
+  assert.match(html, /id="assist-base-url"/);
+  assert.match(html, /id="assist-model"/);
+  assert.match(html, /id="save-assist-settings"/);
+  assert.match(html, /id="assist-question"/);
+  assert.match(html, /id="assist-question"[^>]*placeholder="请看一下我的代码，指出可能的问题和修改建议。"[^>]*><\/textarea>/);
+  assert.doesNotMatch(html, /<textarea id="assist-question"[^>]*>请看一下我的代码/);
+  assert.match(html, /id="ask-assist"/);
+  assert.match(html, /id="assist-answer"/);
+  assert.match(script, /api\/assist\/settings/);
+  assert.match(script, /api\/assist/);
+  assert.match(script, /askAssist/);
+  assert.match(script, /saveApiKey/);
+  assert.match(css, /\.assist-panel/);
+  assert.match(css, /\.assist-answer/);
+});
+
 test("sidebar editor renders line numbers next to code", () => {
   const html = fs.readFileSync("extension/sidebar.html", "utf8");
   const css = fs.readFileSync("extension/sidebar.css", "utf8");

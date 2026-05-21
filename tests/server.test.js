@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { createAcmcoderServer } from "../src/server/server.js";
+import { createAcmcoderServer, getServerHost } from "../src/server/server.js";
 
 function listen(server) {
   return new Promise((resolve) => {
@@ -159,6 +159,11 @@ test("exposes memory storage location for the extension sidebar", async () => {
   } finally {
     server.close();
   }
+});
+
+test("server binds to localhost by default and can be opened for Docker port publishing", () => {
+  assert.equal(getServerHost({}), "127.0.0.1");
+  assert.equal(getServerHost({ ACMCODER_HOST: "0.0.0.0" }), "0.0.0.0");
 });
 
 test("deletes selected memory pages in batch", async () => {
@@ -562,6 +567,69 @@ test("passes runner mode from run API into the runner layer", async () => {
     assert.equal(response.status, 200);
     assert.equal(body.result.message, "captured");
     assert.equal(calls[0].runner, "docker");
+  } finally {
+    server.close();
+  }
+});
+
+test("stores assist settings and serves model advice through the local API", async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-assist-server-"));
+  const assistSettingsFile = path.join(tempDir, "settings.json");
+  const calls = [];
+  const server = createAcmcoderServer({
+    assistSettingsFile,
+    assistFetch: async (url, options) => {
+      calls.push({ url, options });
+      return new Response(
+        JSON.stringify({
+          choices: [{ message: { content: "先补充空数组处理。" } }],
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      );
+    },
+  });
+  const port = await listen(server);
+
+  try {
+    const saveResponse = await fetch(`http://127.0.0.1:${port}/api/assist/settings`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        apiKey: "sk-local-test",
+        baseUrl: "https://llm.example.test/v1",
+        model: "coder-model",
+      }),
+    });
+    const saveBody = await saveResponse.json();
+
+    assert.equal(saveResponse.status, 200);
+    assert.equal(saveBody.settings.configured, true);
+    assert.equal(saveBody.settings.apiKey, undefined);
+
+    const settingsResponse = await fetch(`http://127.0.0.1:${port}/api/assist/settings`);
+    const settingsBody = await settingsResponse.json();
+    assert.equal(settingsBody.settings.configured, true);
+    assert.equal(settingsBody.settings.model, "coder-model");
+    assert.equal(settingsBody.settings.apiKey, undefined);
+
+    const adviceResponse = await fetch(`http://127.0.0.1:${port}/api/assist`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        language: "python",
+        code: "print(nums[0])",
+        question: "怎么改？",
+        status: "WA",
+      }),
+    });
+    const adviceBody = await adviceResponse.json();
+
+    assert.equal(adviceResponse.status, 200);
+    assert.equal(adviceBody.message, "先补充空数组处理。");
+    assert.equal(calls.length, 1);
   } finally {
     server.close();
   }
