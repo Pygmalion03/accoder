@@ -40,20 +40,22 @@ http://127.0.0.1:43117
 
 ## Docker runner
 
-如果本机没有 Java、C++ 或 Python 工具链，但已经安装 Docker，可以直接选择 Docker runner。首次 Docker 运行会自动检查 `acmcoder-runner:local` 镜像；如果镜像不存在，会自动在项目根目录执行等价的构建命令：
+如果本机能启动 ACMCoder Web，但没有 Java、C++ 或 Python 工具链，可以选择 Docker runner。runner 镜像带了 Java、C++、Python 三套运行环境；页面和 CLI 仍然按每次运行选择的语言执行对应模板。
+
+默认镜像名是 `acmcoder-runner:local`。首次 Docker 运行会自动检查它；如果镜像不存在，会自动在项目根目录执行等价的构建命令：
 
 ```bash
 docker build -t acmcoder-runner:local .
 ```
 
-默认镜像名是 `acmcoder-runner:local`。如果你想提前构建，也可以手动运行上面的命令。如果你要换成自己的镜像名，可以设置 `ACMCODER_DOCKER_IMAGE`：
+如果你想提前构建，也可以手动运行上面的命令。发布后的预构建 runner 镜像可以这样指定：
 
 ```powershell
-$env:ACMCODER_DOCKER_IMAGE="ghcr.io/your-name/acmcoder-runner:v1"
+$env:ACMCODER_DOCKER_IMAGE="ghcr.io/pygmalion03/acmcoder-runner:latest"
 ```
 
 ```bash
-export ACMCODER_DOCKER_IMAGE=ghcr.io/your-name/acmcoder-runner:v1
+export ACMCODER_DOCKER_IMAGE=ghcr.io/pygmalion03/acmcoder-runner:latest
 ```
 
 然后在 CLI 中显式选择 Docker：
@@ -70,10 +72,10 @@ Web 页面也可以在运行模式里选择 Docker。Docker 模式会禁用容�
 
 ## Docker Compose 应用启动
 
-如果用户只有 Docker，没有 Node.js、Java、C++ 或 Python，可以直接启动应用容器：
+如果用户只有 Docker，没有 Node.js、Java、C++ 或 Python，发布后的预构建应用镜像是最短启动路径：
 
 ```bash
-docker compose up --build
+docker compose -f docker-compose.prebuilt.yml up -d
 ```
 
 然后打开：
@@ -82,7 +84,15 @@ docker compose up --build
 http://127.0.0.1:43117
 ```
 
-这时 Web 服务和运行工具链都在容器内，页面里选择 Local runner 即可运行代码。记忆题目、AC 次数和模型设置会保存在宿主机的 `data/memory` 目录。
+这时 `app` 镜像会同时运行 Web 服务，并提供 Java、C++、Python 三套工具链；页面里选择 Local runner 即可运行代码。记忆题目、AC 次数和模型设置会保存在宿主机的 `data/memory` 目录。
+
+如果要从当前源码构建应用镜像，再运行：
+
+```bash
+docker compose up --build
+```
+
+`app` 镜像解决“只有 Docker，也要直接打开 Web”的问题；`runner` 镜像解决“Web 在本地启动，但代码执行交给 Docker”的问题。它们都包含三种语言环境，不需要在部署时先裁掉某一种语言。
 
 更完整的部署现状和限制见：
 
@@ -121,7 +131,7 @@ web                      本地练习页面
 
 ## 后续
 
-下一步更值得做的是 Docker runner、LeetCode 题目转换流程、更多题目贡献规范。浏览器插件可以复用当前本地 HTTP API。
+下一步更值得做的是更多题目贡献规范和镜像发布后的安装体验。浏览器插件可以复用当前本地 HTTP API。
 
 ## 插件记忆模式接口
 

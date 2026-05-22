@@ -19,10 +19,10 @@ http://127.0.0.1:43117
 
 ## 只有 Docker 的用户
 
-现在已经有应用容器：
+发布后的预构建应用镜像是最短路径：
 
 ```bash
-docker compose up --build
+docker compose -f docker-compose.prebuilt.yml up -d
 ```
 
 打开：
@@ -33,11 +33,46 @@ http://127.0.0.1:43117
 
 这条路不要求用户本机安装 Node.js、Java、C++ 或 Python。容器里的 Local runner 已经带了 `python3`、`g++`、`openjdk`，所以页面里选择 Local 就能运行代码。记忆题目、AC 次数、模型设置会通过 `./data/memory:/app/data/memory` 持久化到宿主机。
 
+如果要从当前源码本地构建应用镜像，再运行：
+
+```bash
+docker compose up --build
+```
+
 ## 两类 Docker 镜像的区别
 
-`Dockerfile` 是 runner 镜像。它服务于“本机启动 Web，然后运行代码时选择 Docker runner”的场景。默认镜像名是 `acmcoder-runner:local`，缺失时会自动构建。
+`Dockerfile` 是 runner 镜像。它服务于“本机启动 Web，然后运行代码时选择 Docker runner”的场景。默认镜像名是 `acmcoder-runner:local`，缺失时会自动构建。发布后的预构建镜像名是：
 
-`Dockerfile.app` 是应用镜像。它服务于“用户只有 Docker，也想直接打开 ACMCoder Web”的场景。它把 Node 服务和 Java/C++/Python 工具链都放在一个容器里，因此不需要在容器里再调用 Docker runner。
+```text
+ghcr.io/pygmalion03/acmcoder-runner:latest
+```
+
+`Dockerfile.app` 是应用镜像。它服务于“用户只有 Docker，也想直接打开 ACMCoder Web”的场景。它把 Node 服务和 Java/C++/Python 工具链都放在一个容器里，因此不需要在容器里再调用 Docker runner。发布后的预构建镜像名是：
+
+```text
+ghcr.io/pygmalion03/acmcoder-app:latest
+```
+
+这两个镜像都先做全量三语言。语言选择发生在页面或 CLI 的每次运行里，不发生在 Docker 部署阶段。部署时拆成 Java-only、C++-only、Python-only 镜像是可行的，但会增加镜像矩阵、文档分支和用户选择成本；在当前目标里，先保证“装了 Docker 就能直接用”更划算。
+
+本地 Web 想直接使用预构建 runner 时，可以设置：
+
+```powershell
+$env:ACMCODER_DOCKER_IMAGE="ghcr.io/pygmalion03/acmcoder-runner:latest"
+```
+
+```bash
+export ACMCODER_DOCKER_IMAGE=ghcr.io/pygmalion03/acmcoder-runner:latest
+```
+
+## 镜像发布
+
+`.github/workflows/publish-images.yml` 会发布两类多架构镜像：
+
+- `acmcoder-app`
+- `acmcoder-runner`
+
+它支持手动触发，也会在推送 `v*` tag 时发布带版本 tag 的镜像，并给版本发布产物补 `latest`。`docker-compose.prebuilt.yml` 指向预构建 `app` 镜像，避免零环境用户先在本地 build。
 
 ## 环境扫描
 
@@ -71,8 +106,6 @@ ACMCODER_LLM_MODEL
 
 ## 仍然不够顺的地方
 
-从零用户现在至少需要安装 Docker Desktop，并在项目目录里运行 `docker compose up --build`。这比要求 Node/Java/C++/Python 低很多，但还不是“一键安装”。
+从零用户现在至少需要安装 Docker Desktop，并在项目目录里运行一条 Compose 命令。预构建镜像已经把本地 build 从默认路径里拿掉，但还不是“一键安装”。
 
-下一步更值得做的是发布预构建镜像，例如 `ghcr.io/<owner>/acmcoder-app:v1` 和 `ghcr.io/<owner>/acmcoder-runner:v1`。这样用户可以跳过本地 build，只运行 `docker compose up` 或一条 `docker run`。
-
-再往后可以补安装脚本或桌面打包，但优先级低于预构建镜像。桌面打包会增加维护成本，而且代码执行沙箱仍然要认真处理。
+再往后可以补安装脚本或桌面打包，但要先保证镜像发布和升级路径稳定。桌面打包会增加维护成本，而且代码执行沙箱仍然要认真处理。
