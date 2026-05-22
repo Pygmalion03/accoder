@@ -2,18 +2,74 @@
 
 基于 LeetCode 题目索引的本地 ACM 练习器。第一版先跑通本地真实执行闭环：题单、ACM 输入输出协议、固定样例、自定义输入、CLI 和本地 Web。
 
+## 快速开始
+
+普通用户优先走 Docker app，不需要安装 Node.js、Java、C++ 或 Python，只需要 Docker Desktop：
+
+```bash
+git clone https://github.com/Pygmalion03/acmcoder.git
+cd acmcoder
+docker compose -f docker-compose.prebuilt.yml up -d
+```
+
+打开：
+
+```text
+http://127.0.0.1:43117
+```
+
+如果不想安装 Git，也可以在 GitHub 页面下载源码 ZIP，解压后在目录里运行同一条 `docker compose -f docker-compose.prebuilt.yml up -d`。
+
+停止服务：
+
+```bash
+docker compose -f docker-compose.prebuilt.yml down
+```
+
+更新到最新镜像：
+
+```bash
+git pull
+docker compose -f docker-compose.prebuilt.yml pull
+docker compose -f docker-compose.prebuilt.yml up -d
+```
+
+## 版本与发布物
+
+当前推荐版本是 `v2.1` / `v2.1.0`。
+
+这个项目有三类容易混淆的东西：
+
+- **源码分支**：例如 `v2.1`，包含 Web、CLI、题目数据、Dockerfile 和文档。
+- **GitHub Release**：面向用户看的版本说明页。它不是 Docker 镜像本身，也不是运行必需条件。
+- **GHCR Docker package**：真正给 Docker 用户拉取的预构建镜像。
+
+目前 Docker 用户主要使用：
+
+```text
+ghcr.io/pygmalion03/acmcoder-app:latest
+ghcr.io/pygmalion03/acmcoder-app:v2.1.0
+ghcr.io/pygmalion03/acmcoder-runner:latest
+ghcr.io/pygmalion03/acmcoder-runner:v2.1.0
+```
+
+Release 的价值是让用户在 GitHub 页面上看到“这是哪个版本、改了什么、应该怎么启动”。没有 Release 也不影响 Docker 镜像运行，但有 Release 更适合公开项目使用。
+
 ## 当前版本
 
 - 5 道种子题。
 - 支持 Java、C++、Python。
-- 使用本机 `javac`、`g++`、`python` 真实运行。
+- 支持本机 `javac`、`g++`、`python` 真实运行，也支持 Docker runner。
+- 支持预构建 Docker app，用户只装 Docker 也能打开 Web 使用。
 - 不分发完整 LeetCode 题面，只保留题目索引、链接和自维护 ACM 协议。
 - 不使用 LLM 作为判题器。
 
-## 运行
+## 源码本地运行
+
+适合开发者，或已经有 Node.js 的用户：
 
 ```bash
-cd E:\Projects\acmcoder
+npm install
 npm test
 node bin/acmcoder.js list
 node bin/acmcoder.js show two-sum
@@ -84,6 +140,8 @@ docker compose -f docker-compose.prebuilt.yml up -d
 http://127.0.0.1:43117
 ```
 
+这条路径默认使用用户本机已有的 Java/C++/Python 环境。下载源码本身不会修改用户的 Docker 配置，也不会安装本机编译环境。
+
 这时 `app` 镜像会同时运行 Web 服务，并提供 Java、C++、Python 三套工具链；页面里选择 Local runner 即可运行代码。记忆题目、AC 次数和模型设置会保存在宿主机的 `data/memory` 目录。
 
 如果要从当前源码构建应用镜像，再运行：
@@ -93,6 +151,14 @@ docker compose up --build
 ```
 
 `app` 镜像解决“只有 Docker，也要直接打开 Web”的问题；`runner` 镜像解决“Web 在本地启动，但代码执行交给 Docker”的问题。它们都包含三种语言环境，不需要在部署时先裁掉某一种语言。
+
+三种使用方式可以这样理解：
+
+| 使用方式 | Web 服务 | 编译/运行环境 |
+| --- | --- | --- |
+| 源码 + Local runner | 本机 Node.js | 本机 Java/C++/Python |
+| 源码 + Docker runner | 本机 Node.js | Docker runner 镜像 |
+| Docker app 镜像 | Docker app 容器 | Docker app 容器 |
 
 更完整的部署现状和限制见：
 
@@ -105,6 +171,8 @@ docs/deployment.md
 Web 页面和 Edge 侧边栏会调用 `/api/doctor` 显示 Python、Java、C++ 与 Docker runner 状态，并在用户还没有手动选择运行模式时按当前语言给出推荐。
 
 模型建议是可选能力，不参与判题，也不会覆盖源代码。用户可以在页面里填写 API Key、Base URL 和 Model，服务端会通过 OpenAI-compatible `chat/completions` 接口请求建议。设置保存在 `data/memory/settings.json`，也可以通过 `ACMCODER_LLM_API_KEY`、`ACMCODER_LLM_BASE_URL`、`ACMCODER_LLM_MODEL` 配置。
+
+`data/memory/` 已被 git 忽略，API Key 不会随源码提交。注意它目前是本机明文保存，适合个人本地使用，不要把自己的 `data/memory` 目录分享给别人。
 
 ## CLI
 

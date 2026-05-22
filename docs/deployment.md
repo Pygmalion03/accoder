@@ -33,6 +33,8 @@ http://127.0.0.1:43117
 
 这条路不要求用户本机安装 Node.js、Java、C++ 或 Python。容器里的 Local runner 已经带了 `python3`、`g++`、`openjdk`，所以页面里选择 Local 就能运行代码。记忆题目、AC 次数、模型设置会通过 `./data/memory:/app/data/memory` 持久化到宿主机。
 
+这条路径会创建 Docker 镜像、容器和 Compose 网络，但不会修改用户 Docker Desktop 的全局配置，也不会往宿主机安装 Java/C++/Python。
+
 如果要从当前源码本地构建应用镜像，再运行：
 
 ```bash
@@ -55,6 +57,14 @@ ghcr.io/pygmalion03/acmcoder-app:latest
 
 这两个镜像都先做全量三语言。语言选择发生在页面或 CLI 的每次运行里，不发生在 Docker 部署阶段。部署时拆成 Java-only、C++-only、Python-only 镜像是可行的，但会增加镜像矩阵、文档分支和用户选择成本；在当前目标里，先保证“装了 Docker 就能直接用”更划算。
 
+三种入口的边界：
+
+| 使用方式 | Web 服务 | 编译/运行环境 | 适合谁 |
+| --- | --- | --- | --- |
+| 源码 + Local runner | 宿主机 Node.js | 宿主机 Java/C++/Python | 开发者，本机环境齐全 |
+| 源码 + Docker runner | 宿主机 Node.js | Docker runner 镜像 | 有 Node.js，但不想装编译环境 |
+| Docker app 镜像 | Docker app 容器 | Docker app 容器 | 只有 Docker 的普通用户 |
+
 本地 Web 想直接使用预构建 runner 时，可以设置：
 
 ```powershell
@@ -73,6 +83,25 @@ export ACMCODER_DOCKER_IMAGE=ghcr.io/pygmalion03/acmcoder-runner:latest
 - `acmcoder-runner`
 
 它支持手动触发，也会在推送 `v*` tag 时发布带版本 tag 的镜像，并给版本发布产物补 `latest`。`docker-compose.prebuilt.yml` 指向预构建 `app` 镜像，避免零环境用户先在本地 build。
+
+## Release、源码和 Package 的关系
+
+Release 不是 Docker 运行的必要条件。Docker 用户真正拉取的是 GHCR package：
+
+```text
+ghcr.io/pygmalion03/acmcoder-app:latest
+ghcr.io/pygmalion03/acmcoder-runner:latest
+```
+
+Release 的作用是给用户一个清晰的版本页，说明这个版本对应哪个 tag、有哪些镜像、怎么启动。源码 ZIP/TAR 也会挂在 Release 下面，但普通 Docker 用户仍然建议使用仓库里的 `docker-compose.prebuilt.yml` 或最新源码目录，而不是把 Release 当成安装器。
+
+现在推荐的公开版本是：
+
+```text
+branch: v2.1
+tag:    v2.1.0
+image:  ghcr.io/pygmalion03/acmcoder-app:v2.1.0
+```
 
 ## 环境扫描
 
