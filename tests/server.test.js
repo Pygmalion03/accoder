@@ -52,7 +52,7 @@ test("serves problem metadata over the local API", async () => {
 
     assert.equal(response.status, 200);
     assert.equal(body.problems.length, 5);
-    assert.equal(body.problems[0].slug, "two-sum");
+    assert.equal(body.problems[0].slug, "longest-substring-without-repeating-characters");
   } finally {
     server.close();
   }
@@ -64,11 +64,11 @@ test("serves one problem by slug", async () => {
   const port = await listen(server);
 
   try {
-    const response = await fetch(`http://127.0.0.1:${port}/api/problems/two-sum`);
+    const response = await fetch(`http://127.0.0.1:${port}/api/problems/reverse-linked-list`);
     const body = await response.json();
 
     assert.equal(response.status, 200);
-    assert.equal(body.problem.title, "两数之和");
+    assert.equal(body.problem.title, "反转链表");
   } finally {
     server.close();
   }
@@ -247,16 +247,16 @@ test("deletes selected visible problems including seed and memory entries", asyn
       headers: {
         "content-type": "application/json",
       },
-      body: JSON.stringify({ slugs: ["two-sum", "memory:alpha"] }),
+      body: JSON.stringify({ slugs: ["reverse-linked-list", "memory:alpha"] }),
     });
     const body = await response.json();
 
     assert.equal(response.status, 200);
-    assert.deepEqual(body.deletedSlugs, ["two-sum", "memory:alpha"]);
+    assert.deepEqual(body.deletedSlugs, ["reverse-linked-list", "memory:alpha"]);
 
     const listResponse = await fetch(`http://127.0.0.1:${port}/api/problems`);
     const listBody = await listResponse.json();
-    assert.equal(listBody.problems.some((problem) => problem.slug === "two-sum"), false);
+    assert.equal(listBody.problems.some((problem) => problem.slug === "reverse-linked-list"), false);
 
     const memoryResponse = await fetch(`http://127.0.0.1:${port}/api/memory/pages`);
     const memoryBody = await memoryResponse.json();
@@ -277,7 +277,7 @@ test("exports selected seed and memory problems as downloadable json", async () 
   try {
     await saveMemoryPage(port, memoryPage("alpha", { title: "alpha memory", capturedAt: "2026-05-14T01:00:00.000Z" }));
 
-    const response = await fetch(`http://127.0.0.1:${port}/api/problems/export?slugs=two-sum,memory:alpha`);
+    const response = await fetch(`http://127.0.0.1:${port}/api/problems/export?slugs=reverse-linked-list,memory:alpha`);
     const body = await response.json();
 
     assert.equal(response.status, 200);
@@ -285,7 +285,7 @@ test("exports selected seed and memory problems as downloadable json", async () 
     assert.equal(body.format, "acmcoder-problems-v1");
     assert.deepEqual(
       body.problems.map((problem) => problem.slug),
-      ["two-sum", "memory:alpha"],
+      ["reverse-linked-list", "memory:alpha"],
     );
   } finally {
     server.close();
@@ -304,7 +304,7 @@ test("imports exported problems by restoring hidden seeds and saving memory entr
     await fetch(`http://127.0.0.1:${port}/api/problems`, {
       method: "DELETE",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ slugs: ["two-sum"] }),
+        body: JSON.stringify({ slugs: ["reverse-linked-list"] }),
     });
 
     const response = await fetch(`http://127.0.0.1:${port}/api/problems/import`, {
@@ -313,7 +313,7 @@ test("imports exported problems by restoring hidden seeds and saving memory entr
       body: JSON.stringify({
         format: "acmcoder-problems-v1",
         problems: [
-          { source: "seed", slug: "two-sum" },
+          { source: "seed", slug: "reverse-linked-list" },
           {
             source: "memory",
             slug: "memory:alpha",
@@ -333,12 +333,12 @@ test("imports exported problems by restoring hidden seeds and saving memory entr
 
     assert.equal(response.status, 200);
     assert.equal(body.importedCount, 2);
-    assert.deepEqual(body.restoredSeedSlugs, ["two-sum"]);
+    assert.deepEqual(body.restoredSeedSlugs, ["reverse-linked-list"]);
     assert.deepEqual(body.importedMemorySlugs, ["alpha"]);
 
     const listResponse = await fetch(`http://127.0.0.1:${port}/api/problems`);
     const listBody = await listResponse.json();
-    assert.equal(listBody.problems.some((problem) => problem.slug === "two-sum"), true);
+    assert.equal(listBody.problems.some((problem) => problem.slug === "reverse-linked-list"), true);
 
     const memoryResponse = await fetch(`http://127.0.0.1:${port}/api/memory/pages?slug=alpha`);
     const memoryBody = await memoryResponse.json();
@@ -401,13 +401,13 @@ test("records accepted progress through run API and exposes it to problems and m
   const port = await listen(server);
 
   try {
-    await saveMemoryPage(port, memoryPage("two-sum", { title: "two sum memory" }));
+    await saveMemoryPage(port, memoryPage("reverse-linked-list", { title: "reverse linked list memory" }));
 
     const firstRun = await fetch(`http://127.0.0.1:${port}/api/run`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        slug: "memory:two-sum",
+        slug: "memory:reverse-linked-list",
         language: "python",
         code: "print(1)",
         stdin: "",
@@ -421,7 +421,7 @@ test("records accepted progress through run API and exposes it to problems and m
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        slug: "two-sum",
+        slug: "reverse-linked-list",
         language: "python",
         code: "print(1)",
         stdin: "",
@@ -440,9 +440,9 @@ test("records accepted progress through run API and exposes it to problems and m
 
     const problemsResponse = await fetch(`http://127.0.0.1:${port}/api/problems`);
     const problemsBody = await problemsResponse.json();
-    assert.equal(problemsBody.problems.find((problem) => problem.slug === "two-sum").progress.acCount, 2);
+    assert.equal(problemsBody.problems.find((problem) => problem.slug === "reverse-linked-list").progress.acCount, 2);
 
-    const memoryResponse = await fetch(`http://127.0.0.1:${port}/api/memory/pages?slug=two-sum`);
+    const memoryResponse = await fetch(`http://127.0.0.1:${port}/api/memory/pages?slug=reverse-linked-list`);
     const memoryBody = await memoryResponse.json();
     assert.equal(memoryBody.pages[0].progress.acCount, 2);
   } finally {
@@ -485,11 +485,11 @@ test("exports and imports problem progress idempotently", async () => {
       await fetch(`http://127.0.0.1:${sourcePort}/api/run`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ slug: "two-sum", language: "python", code: "print(1)", runner: "local" }),
+        body: JSON.stringify({ slug: "reverse-linked-list", language: "python", code: "print(1)", runner: "local" }),
       });
     }
 
-    const exportResponse = await fetch(`http://127.0.0.1:${sourcePort}/api/problems/export?slugs=two-sum`);
+    const exportResponse = await fetch(`http://127.0.0.1:${sourcePort}/api/problems/export?slugs=reverse-linked-list`);
     const exportBody = await exportResponse.json();
     assert.equal(exportBody.problems[0].progress.acCount, 2);
 
@@ -497,13 +497,13 @@ test("exports and imports problem progress idempotently", async () => {
       await fetch(`http://127.0.0.1:${targetPort}/api/run`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ slug: "two-sum", language: "python", code: "print(1)", runner: "local" }),
+        body: JSON.stringify({ slug: "reverse-linked-list", language: "python", code: "print(1)", runner: "local" }),
       });
     }
 
     const beforeImport = await fetch(`http://127.0.0.1:${targetPort}/api/problems`);
     const beforeImportBody = await beforeImport.json();
-    assert.equal(beforeImportBody.problems.find((problem) => problem.slug === "two-sum").progress.acCount, 3);
+    assert.equal(beforeImportBody.problems.find((problem) => problem.slug === "reverse-linked-list").progress.acCount, 3);
 
     const lowerImport = await fetch(`http://127.0.0.1:${targetPort}/api/problems/import`, {
       method: "POST",
@@ -515,7 +515,7 @@ test("exports and imports problem progress idempotently", async () => {
 
     const afterLowerImport = await fetch(`http://127.0.0.1:${targetPort}/api/problems`);
     const afterLowerBody = await afterLowerImport.json();
-    assert.equal(afterLowerBody.problems.find((problem) => problem.slug === "two-sum").progress.acCount, 3);
+    assert.equal(afterLowerBody.problems.find((problem) => problem.slug === "reverse-linked-list").progress.acCount, 3);
 
     exportBody.problems[0].progress.acCount = 5;
     const higherImport = await fetch(`http://127.0.0.1:${targetPort}/api/problems/import`, {
@@ -528,7 +528,7 @@ test("exports and imports problem progress idempotently", async () => {
 
     const afterHigherImport = await fetch(`http://127.0.0.1:${targetPort}/api/problems`);
     const afterHigherBody = await afterHigherImport.json();
-    assert.equal(afterHigherBody.problems.find((problem) => problem.slug === "two-sum").progress.acCount, 5);
+    assert.equal(afterHigherBody.problems.find((problem) => problem.slug === "reverse-linked-list").progress.acCount, 5);
   } finally {
     sourceServer.close();
     targetServer.close();

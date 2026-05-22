@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -7,21 +8,40 @@ test("loads seeded ACM problems", () => {
   const problems = loadProblems();
 
   assert.equal(problems.length, 5);
-  assert.equal(problems[0].slug, "two-sum");
+  assert.deepEqual(
+    problems.map((problem) => problem.frontendId),
+    ["3", "146", "206", "215", "25"],
+  );
 });
 
 test("finds a problem by slug or frontend id", () => {
-  assert.equal(findProblem("two-sum").title, "两数之和");
-  assert.equal(findProblem("1").slug, "two-sum");
+  assert.equal(findProblem("reverse-linked-list").title, "反转链表");
+  assert.equal(findProblem("206").slug, "reverse-linked-list");
 });
 
 test("exposes problem-facing descriptions instead of only runner metadata", () => {
-  const problem = findProblem("two-sum");
+  const problem = findProblem("longest-substring-without-repeating-characters");
 
-  assert.match(problem.description, /整数数组 nums/);
-  assert.match(problem.inputDescription, /第一行/);
+  assert.match(problem.description, /无重复字符/);
+  assert.match(problem.inputDescription, /字符串/);
   assert.match(problem.outputDescription, /LeetCode 返回值/);
-  assert.match(problem.exampleExplanation, /n = 4/);
+  assert.match(problem.exampleExplanation, /abcabcbb/);
+});
+
+test("seed problems share simple templates instead of bundled answers", () => {
+  const slugs = loadProblems().map((problem) => problem.slug);
+  const files = {
+    python: "main.py",
+    java: "Main.java",
+    cpp: "main.cpp",
+  };
+
+  for (const fileName of Object.values(files)) {
+    const templates = slugs.map((slug) => fs.readFileSync(`problems/${slug}/templates/${fileName}`, "utf8"));
+
+    assert.equal(new Set(templates).size, 1);
+    assert.match(templates[0], /TODO/);
+  }
 });
 
 test("throws a clear error for an unknown problem", () => {

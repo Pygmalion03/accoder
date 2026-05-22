@@ -133,6 +133,14 @@ test("sidebar shows runner environment status from the local doctor API", () => 
   assert.match(css, /\.runner-health\.warn/);
 });
 
+test("sidebar explains Docker app uses its built-in environment", () => {
+  const script = fs.readFileSync("extension/sidebar.js", "utf8");
+
+  assert.match(script, /deployment\?\.mode === "docker-app"/);
+  assert.match(script, /当前本地服务运行在 Docker app 容器中/);
+  assert.match(script, /dockerOption\.disabled/);
+});
+
 test("sidebar exposes lightweight optional model advice through the local service", () => {
   const html = fs.readFileSync("extension/sidebar.html", "utf8");
   const css = fs.readFileSync("extension/sidebar.css", "utf8");

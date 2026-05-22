@@ -1,5 +1,18 @@
 # ACMCoder 部署现状
 
+## 先分清入口和运行模式
+
+ACMCoder 现在有两个 Web 启动入口：
+
+- 宿主机源码启动：Node 服务在本机跑。
+- Docker app 启动：Node 服务和 Java/C++/Python 工具链都在 app 容器里。
+
+页面里的运行模式只负责决定 `Run` 时把代码交给谁执行：
+
+- `本机环境` 只出现在宿主机源码启动场景，调用宿主机工具链。
+- `Docker runner` 只服务于宿主机 Web 调 Docker runner 镜像。
+- `内置环境` 只出现在 Docker app 场景，调用 app 容器自带工具链。
+
 ## 本地启动
 
 适合开发者或已经有 Node.js 的用户。
@@ -31,7 +44,7 @@ docker compose -f docker-compose.prebuilt.yml up -d
 http://127.0.0.1:43117
 ```
 
-这条路不要求用户本机安装 Node.js、Java、C++ 或 Python。容器里的 Local runner 已经带了 `python3`、`g++`、`openjdk`，所以页面里选择 Local 就能运行代码。记忆题目、AC 次数、模型设置会通过 `./data/memory:/app/data/memory` 持久化到宿主机。
+这条路不要求用户本机安装 Node.js、Java、C++ 或 Python。容器里的内置环境已经带了 `python3`、`g++`、`openjdk`，所以页面里选择 `内置环境` 就能运行代码。它不是 Docker runner，而是 app 容器本身的编译运行环境。记忆题目、AC 次数、模型设置会通过 `./data/memory:/app/data/memory` 持久化到宿主机。
 
 这条路径会创建 Docker 镜像、容器和 Compose 网络，但不会修改用户 Docker Desktop 的全局配置，也不会往宿主机安装 Java/C++/Python。
 
@@ -65,6 +78,8 @@ ghcr.io/pygmalion03/acmcoder-app:latest
 | 源码 + Docker runner | 宿主机 Node.js | Docker runner 镜像 | 有 Node.js，但不想装编译环境 |
 | Docker app 镜像 | Docker app 容器 | Docker app 容器 | 只有 Docker 的普通用户 |
 
+Docker app 模式下页面会禁用 `Docker runner`。如果用户已经通过 Docker app 进入页面，再选 Docker runner 就变成“容器里的 Web 服务继续调用另一个 Docker runner 容器”，当前部署不提供这条链路，也没有必要。
+
 本地 Web 想直接使用预构建 runner 时，可以设置：
 
 ```powershell
@@ -95,13 +110,7 @@ ghcr.io/pygmalion03/acmcoder-runner:latest
 
 Release 的作用是给用户一个清晰的版本页，说明这个版本对应哪个 tag、有哪些镜像、怎么启动。源码 ZIP/TAR 也会挂在 Release 下面，但普通 Docker 用户仍然建议使用仓库里的 `docker-compose.prebuilt.yml` 或最新源码目录，而不是把 Release 当成安装器。
 
-现在推荐的公开版本是：
-
-```text
-branch: v2.1
-tag:    v2.1.0
-image:  ghcr.io/pygmalion03/acmcoder-app:v2.1.0
-```
+源码分支可以先于正式 Release 更新。默认 Compose 文件使用 `ghcr.io/pygmalion03/acmcoder-app:latest`；如果需要固定版本，再使用 Release 对应的 tag，例如 `ghcr.io/pygmalion03/acmcoder-app:v2.1.0`。
 
 ## 环境扫描
 
@@ -111,7 +120,7 @@ Web 和 Edge 侧边栏现在都会调用：
 GET /api/doctor
 ```
 
-它会返回本地 Java/C++/Python 工具链、Docker runner 状态，以及每种语言推荐使用 Local 还是 Docker。用户没有保存过运行模式时，页面会按当前语言自动采用推荐模式；用户手动选择后，以用户选择为准。
+它会返回 Java/C++/Python 工具链、Docker runner 状态和当前部署模式。宿主机源码启动时，用户没有保存过运行模式，页面会按当前语言推荐 `本机环境` 或 `Docker runner`；Docker app 启动时，页面会标明 `内置环境` 并禁用 Docker runner。
 
 ## 模型建议
 

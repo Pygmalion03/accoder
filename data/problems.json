@@ -1,161 +1,156 @@
 [
   {
-    "slug": "two-sum",
-    "frontendId": "1",
-    "title": "两数之和",
-    "difficulty": "easy",
-    "tags": ["array", "hash-table"],
-    "rank": {
-      "source": "seed",
-      "frequency": 980,
-      "updatedAt": "2026-05-12"
-    },
-    "leetcode": {
-      "slug": "two-sum",
-      "url": "https://leetcode.cn/problems/two-sum/"
-    },
-    "description": "给定一个整数数组 nums 和一个整数 target，请你在数组中找出和为 target 的两个整数，并输出它们的数组下标。假设每种输入只会对应一个答案，且同一个元素不能使用两次。",
-    "inputDescription": "第一行输入整数 n，表示 nums 的长度；第二行输入 n 个整数，表示 nums；第三行输入整数 target。样例对应 LeetCode 入参：nums = [2, 7, 11, 15], target = 9。",
-    "outputDescription": "输出两个下标，使用空格分隔。对应 LeetCode 返回值：[0, 1]。",
-    "exampleExplanation": "n = 4，nums = [2, 7, 11, 15]，target = 9；因为 nums[0] + nums[1] = 9，所以输出 0 1。",
-    "acm": {
-      "inputFormat": "第一行输入整数 n；第二行输入 n 个整数；第三行输入 target。",
-      "outputFormat": "输出两个下标，使用空格分隔。若存在多个答案，输出任意一个有效答案。",
-      "notes": "样例按 LeetCode 0-based 下标输出。"
-    },
-    "cases": [
-      {
-        "name": "sample",
-        "input": "problems/two-sum/cases/1.in",
-        "output": "problems/two-sum/cases/1.out"
-      }
-    ]
-  },
-  {
-    "slug": "valid-parentheses",
-    "frontendId": "20",
-    "title": "有效的括号",
-    "difficulty": "easy",
-    "tags": ["string", "stack"],
-    "rank": {
-      "source": "seed",
-      "frequency": 870,
-      "updatedAt": "2026-05-12"
-    },
-    "leetcode": {
-      "slug": "valid-parentheses",
-      "url": "https://leetcode.cn/problems/valid-parentheses/"
-    },
-    "description": "给定一个只包括括号字符的字符串 s，判断字符串是否有效。有效字符串需要满足：左括号必须用相同类型的右括号闭合，并且左括号必须以正确顺序闭合。",
-    "inputDescription": "输入一行字符串 s，只包含字符 '(', ')', '[', ']', '{', '}'。样例对应 LeetCode 入参：s = \"()[]{}\"。",
-    "outputDescription": "如果字符串有效，输出 true；否则输出 false。对应 LeetCode 返回值：true 或 false。",
-    "exampleExplanation": "s = \"()[]{}\"，三组括号都按正确顺序闭合，所以输出 true。",
-    "acm": {
-      "inputFormat": "输入一行只包含括号字符的字符串 s。",
-      "outputFormat": "如果括号有效，输出 true；否则输出 false。",
-      "notes": "输出使用小写布尔值。"
-    },
-    "cases": [
-      {
-        "name": "sample",
-        "input": "problems/valid-parentheses/cases/1.in",
-        "output": "problems/valid-parentheses/cases/1.out"
-      }
-    ]
-  },
-  {
-    "slug": "maximum-subarray",
-    "frontendId": "53",
-    "title": "最大子数组和",
+    "slug": "longest-substring-without-repeating-characters",
+    "frontendId": "3",
+    "title": "无重复字符的最长子串",
     "difficulty": "medium",
-    "tags": ["array", "dynamic-programming"],
+    "tags": ["hash-table", "string", "sliding-window"],
     "rank": {
       "source": "seed",
-      "frequency": 810,
-      "updatedAt": "2026-05-12"
+      "updatedAt": "2026-05-22"
     },
     "leetcode": {
-      "slug": "maximum-subarray",
-      "url": "https://leetcode.cn/problems/maximum-subarray/"
+      "slug": "longest-substring-without-repeating-characters",
+      "url": "https://leetcode.cn/problems/longest-substring-without-repeating-characters/"
     },
-    "description": "给定一个整数数组 nums，请找出一个具有最大和的连续子数组，并输出这个最大和。",
-    "inputDescription": "第一行输入整数 n，表示 nums 的长度；第二行输入 n 个整数，表示 nums。样例对应 LeetCode 入参：nums = [-2,1,-3,4,-1,2,1,-5,4]。",
-    "outputDescription": "输出连续子数组的最大和。对应 LeetCode 返回值：6。",
-    "exampleExplanation": "最大和连续子数组是 [4, -1, 2, 1]，它的和为 6。",
+    "description": "给定一个字符串 s，请找出其中无重复字符的最长子串的长度。",
+    "inputDescription": "输入一行字符串 s。样例对应 LeetCode 入参：s = \"abcabcbb\"。",
+    "outputDescription": "输出无重复字符最长子串的长度。对应 LeetCode 返回值：3。",
+    "exampleExplanation": "s = \"abcabcbb\" 时，\"abc\" 是一个最长无重复字符子串，长度为 3。",
     "acm": {
-      "inputFormat": "第一行输入整数 n；第二行输入 n 个整数。",
-      "outputFormat": "输出连续子数组的最大和。",
-      "notes": "数组至少包含一个元素。"
+      "inputFormat": "输入一行字符串 s。",
+      "outputFormat": "输出一个整数，表示无重复字符最长子串的长度。",
+      "notes": "空字符串时输出 0。"
     },
     "cases": [
       {
         "name": "sample",
-        "input": "problems/maximum-subarray/cases/1.in",
-        "output": "problems/maximum-subarray/cases/1.out"
+        "input": "problems/longest-substring-without-repeating-characters/cases/1.in",
+        "output": "problems/longest-substring-without-repeating-characters/cases/1.out"
       }
     ]
   },
   {
-    "slug": "best-time-to-buy-and-sell-stock",
-    "frontendId": "121",
-    "title": "买卖股票的最佳时机",
-    "difficulty": "easy",
-    "tags": ["array", "greedy"],
+    "slug": "lru-cache",
+    "frontendId": "146",
+    "title": "LRU 缓存机制",
+    "difficulty": "medium",
+    "tags": ["hash-table", "linked-list", "design"],
     "rank": {
       "source": "seed",
-      "frequency": 760,
-      "updatedAt": "2026-05-12"
+      "updatedAt": "2026-05-22"
     },
     "leetcode": {
-      "slug": "best-time-to-buy-and-sell-stock",
-      "url": "https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/"
+      "slug": "lru-cache",
+      "url": "https://leetcode.cn/problems/lru-cache/"
     },
-    "description": "给定一个数组 prices，其中 prices[i] 表示某只股票第 i 天的价格。你只能选择某一天买入，并在未来某一天卖出，输出可以获得的最大利润。",
-    "inputDescription": "第一行输入整数 n，表示 prices 的长度；第二行输入 n 个整数，表示每天的价格。样例对应 LeetCode 入参：prices = [7,1,5,3,6,4]。",
-    "outputDescription": "输出最大利润；如果不能获得利润，输出 0。对应 LeetCode 返回值：5。",
-    "exampleExplanation": "在价格为 1 的第 2 天买入，在价格为 6 的第 5 天卖出，利润为 5。",
+    "description": "请实现一个固定容量的 LRU 缓存。get 读取键并更新最近使用顺序，put 写入键值并在容量不足时淘汰最久未使用的键。",
+    "inputDescription": "第一行输入 capacity 和 q；接下来 q 行是操作：put key value 或 get key。",
+    "outputDescription": "每个 get 操作输出一行结果；键不存在时输出 -1。这个协议对应 LeetCode 的方法调用序列。",
+    "exampleExplanation": "容量为 2 时，访问 1 后写入 3 会淘汰键 2；再写入 4 会淘汰键 1。",
     "acm": {
-      "inputFormat": "第一行输入整数 n；第二行输入 n 个价格。",
-      "outputFormat": "输出最大利润，不能盈利时输出 0。",
-      "notes": "只能买入一次并卖出一次。"
+      "inputFormat": "第一行 capacity q；后续 q 行输入 put key value 或 get key。",
+      "outputFormat": "按顺序输出每个 get 的返回值，每个结果独占一行。",
+      "notes": "put 操作本身不输出。"
     },
     "cases": [
       {
         "name": "sample",
-        "input": "problems/best-time-to-buy-and-sell-stock/cases/1.in",
-        "output": "problems/best-time-to-buy-and-sell-stock/cases/1.out"
+        "input": "problems/lru-cache/cases/1.in",
+        "output": "problems/lru-cache/cases/1.out"
       }
     ]
   },
   {
-    "slug": "climbing-stairs",
-    "frontendId": "70",
-    "title": "爬楼梯",
+    "slug": "reverse-linked-list",
+    "frontendId": "206",
+    "title": "反转链表",
     "difficulty": "easy",
-    "tags": ["math", "dynamic-programming"],
+    "tags": ["linked-list", "recursion"],
     "rank": {
       "source": "seed",
-      "frequency": 690,
-      "updatedAt": "2026-05-12"
+      "updatedAt": "2026-05-22"
     },
     "leetcode": {
-      "slug": "climbing-stairs",
-      "url": "https://leetcode.cn/problems/climbing-stairs/"
+      "slug": "reverse-linked-list",
+      "url": "https://leetcode.cn/problems/reverse-linked-list/"
     },
-    "description": "假设你正在爬楼梯，需要 n 阶才能到达楼顶。每次可以爬 1 或 2 个台阶，输出有多少种不同的方法可以爬到楼顶。",
-    "inputDescription": "输入一个整数 n。样例对应 LeetCode 入参：n = 5。",
-    "outputDescription": "输出爬到第 n 阶楼梯的方法数。对应 LeetCode 返回值：8。",
-    "exampleExplanation": "n = 5 时共有 8 种爬法，所以输出 8。",
+    "description": "给定单链表的头节点，请反转链表并输出反转后的节点值顺序。",
+    "inputDescription": "第一行输入整数 n；第二行输入 n 个节点值，按原链表顺序给出。",
+    "outputDescription": "输出反转后的节点值，使用空格分隔。对应 LeetCode 返回的链表节点顺序。",
+    "exampleExplanation": "链表 1 -> 2 -> 3 -> 4 -> 5 反转后为 5 -> 4 -> 3 -> 2 -> 1。",
     "acm": {
-      "inputFormat": "输入一个整数 n。",
-      "outputFormat": "输出爬到第 n 阶楼梯的方法数。",
-      "notes": "每次可以爬 1 或 2 阶。"
+      "inputFormat": "第一行 n；第二行 n 个整数表示链表节点值。",
+      "outputFormat": "输出反转后的 n 个节点值，使用空格分隔。",
+      "notes": "输入 n = 0 时可以输出空行。"
     },
     "cases": [
       {
         "name": "sample",
-        "input": "problems/climbing-stairs/cases/1.in",
-        "output": "problems/climbing-stairs/cases/1.out"
+        "input": "problems/reverse-linked-list/cases/1.in",
+        "output": "problems/reverse-linked-list/cases/1.out"
+      }
+    ]
+  },
+  {
+    "slug": "kth-largest-element-in-an-array",
+    "frontendId": "215",
+    "title": "数组中的第 K 个最大元素",
+    "difficulty": "medium",
+    "tags": ["array", "divide-and-conquer", "heap", "quickselect"],
+    "rank": {
+      "source": "seed",
+      "updatedAt": "2026-05-22"
+    },
+    "leetcode": {
+      "slug": "kth-largest-element-in-an-array",
+      "url": "https://leetcode.cn/problems/kth-largest-element-in-an-array/"
+    },
+    "description": "给定整数数组 nums 和整数 k，请输出数组排序后第 k 个最大的元素。",
+    "inputDescription": "第一行输入 n 和 k；第二行输入 n 个整数。样例对应 LeetCode 入参：nums = [3,2,1,5,6,4], k = 2。",
+    "outputDescription": "输出第 k 个最大的元素。对应 LeetCode 返回值：5。",
+    "exampleExplanation": "数组按从大到小排序后为 [6,5,4,3,2,1]，第 2 个元素是 5。",
+    "acm": {
+      "inputFormat": "第一行 n k；第二行 n 个整数。",
+      "outputFormat": "输出一个整数，表示第 k 个最大元素。",
+      "notes": "k 从 1 开始计数。"
+    },
+    "cases": [
+      {
+        "name": "sample",
+        "input": "problems/kth-largest-element-in-an-array/cases/1.in",
+        "output": "problems/kth-largest-element-in-an-array/cases/1.out"
+      }
+    ]
+  },
+  {
+    "slug": "reverse-nodes-in-k-group",
+    "frontendId": "25",
+    "title": "K 个一组翻转链表",
+    "difficulty": "hard",
+    "tags": ["linked-list", "recursion"],
+    "rank": {
+      "source": "seed",
+      "updatedAt": "2026-05-22"
+    },
+    "leetcode": {
+      "slug": "reverse-nodes-in-k-group",
+      "url": "https://leetcode.cn/problems/reverse-nodes-in-k-group/"
+    },
+    "description": "给定链表头节点和整数 k，请按每 k 个节点一组翻转链表；最后不足 k 个节点时保持原顺序。",
+    "inputDescription": "第一行输入 n 和 k；第二行输入 n 个节点值，按原链表顺序给出。",
+    "outputDescription": "输出翻转后的节点值，使用空格分隔。对应 LeetCode 返回链表的节点顺序。",
+    "exampleExplanation": "n = 5、k = 2 时，1 2 3 4 5 会变成 2 1 4 3 5。",
+    "acm": {
+      "inputFormat": "第一行 n k；第二行 n 个整数表示链表节点值。",
+      "outputFormat": "输出处理后的 n 个节点值，使用空格分隔。",
+      "notes": "最后不足 k 个节点时不翻转。"
+    },
+    "cases": [
+      {
+        "name": "sample",
+        "input": "problems/reverse-nodes-in-k-group/cases/1.in",
+        "output": "problems/reverse-nodes-in-k-group/cases/1.out"
       }
     ]
   }

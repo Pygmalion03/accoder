@@ -10,6 +10,7 @@ test("repository includes a Docker app image for zero-local-toolchain users", ()
   assert.match(dockerfile, /openjdk/i);
   assert.match(dockerfile, /python3/);
   assert.match(dockerfile, /ACMCODER_HOST=0\.0\.0\.0/);
+  assert.match(dockerfile, /ACMCODER_DEPLOYMENT_MODE=docker-app/);
   assert.match(dockerfile, /bin\/acmcoder\.js/);
 });
 

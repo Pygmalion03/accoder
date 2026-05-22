@@ -21,7 +21,6 @@ const GENERIC_TEMPLATES = {
 def main():
     data = sys.stdin.read()
     # TODO: parse stdin and print the answer
-    print(data.strip())
 
 
 if __name__ == "__main__":
@@ -35,9 +34,6 @@ public class Main {
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         // TODO: parse stdin and print the answer
         String line = reader.readLine();
-        if (line != null) {
-            System.out.println(line);
-        }
     }
 }
 `,
@@ -50,9 +46,7 @@ int main() {
 
     // TODO: parse stdin and print the answer
     string line;
-    if (getline(cin, line)) {
-        cout << line << '\\n';
-    }
+    getline(cin, line);
     return 0;
 }
 `,
@@ -209,9 +203,37 @@ function currentRunnerRecommendation() {
   return state.environment?.recommendedRunnerByLanguage?.[elements.language.value] || "";
 }
 
+function isDockerAppDeployment() {
+  return state.environment?.deployment?.mode === "docker-app";
+}
+
+function runnerLabel(runner) {
+  if (runner === "docker") {
+    return "Docker runner";
+  }
+  return state.environment?.deployment?.localRunnerLabel || "本机环境";
+}
+
 function setRunnerHealth(message, kind = "") {
   elements.runnerHealth.textContent = message;
   elements.runnerHealth.className = `runner-health ${kind}`.trim();
+}
+
+function updateRunnerModeOptions() {
+  const localOption = elements.runner.querySelector('option[value="local"]');
+  const dockerOption = elements.runner.querySelector('option[value="docker"]');
+  const dockerApp = isDockerAppDeployment();
+
+  if (localOption) {
+    localOption.textContent = runnerLabel("local");
+  }
+  if (dockerOption) {
+    dockerOption.textContent = "Docker runner";
+    dockerOption.disabled = dockerApp;
+  }
+  if (dockerApp && elements.runner.value === "docker") {
+    elements.runner.value = "local";
+  }
 }
 
 function renderRunnerHealth() {
@@ -224,7 +246,15 @@ function renderRunnerHealth() {
   const docker = state.environment.docker;
   const runner = elements.runner.value;
   const recommendation = currentRunnerRecommendation();
-  const suffix = recommendation && recommendation !== runner ? ` 推荐：${recommendation === "docker" ? "Docker" : "Local"}。` : "";
+  const suffix = recommendation && recommendation !== runner ? ` 推荐：${runnerLabel(recommendation)}。` : "";
+
+  if (isDockerAppDeployment()) {
+    const message = local?.ready
+      ? `当前运行在 Docker app 容器中，${local.label} 已由内置环境提供；请使用“内置环境”运行代码。`
+      : `当前运行在 Docker app 容器中，但内置环境缺少 ${local?.label || "当前语言"}。`;
+    setRunnerHealth(message, local?.ready ? "ok" : "warn");
+    return;
+  }
 
   if (runner === "docker") {
     setRunnerHealth(docker.ready ? `Docker 可用。${docker.message}` : `Docker 不可用：${docker.message}`, docker.ready ? "ok" : "warn");
@@ -255,6 +285,7 @@ function applyRecommendedRunnerIfNeeded() {
 async function loadDoctor(options = {}) {
   try {
     state.environment = await getJson("/api/doctor");
+    updateRunnerModeOptions();
     if (options.applyDefault) {
       applyRecommendedRunnerIfNeeded();
     }

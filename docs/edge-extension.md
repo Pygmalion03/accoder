@@ -1,25 +1,30 @@
 # Edge 插件使用说明
 
-插件目录：
+当前插件先走手动加载，还没有把 Edge Add-ons 商店当成安装入口。下载仓库源码或源码 ZIP 并解压后，插件目录是：
 
 ```text
-E:\Projects\acmcoder\extension
+extension/
 ```
 
 ## 加载方式
 
-1. 启动本地服务：
+1. 先启动 ACMCoder 服务。插件本身不包含 Web 服务和运行环境，必须连到本地 ACMCoder。只有 Docker 的用户可以运行：
 
 ```bash
-cd E:\Projects\acmcoder
+docker compose -f docker-compose.prebuilt.yml up -d
+```
+
+   本地 Node.js 用户也可以运行：
+
+```bash
 npm start
 ```
 
 2. 打开 Edge，进入 `edge://extensions/`。
 3. 开启“开发人员模式”。
 4. 点击“加载解压缩的扩展”。
-5. 选择 `E:\Projects\acmcoder\extension`。
-6. 打开 LeetCode 题目页，例如 `https://leetcode.cn/problems/two-sum/`。
+5. 选择项目里解压后的 `extension/` 目录，不要选择 zip 文件本身。
+6. 打开 LeetCode 题目页，例如 `https://leetcode.cn/problems/reverse-linked-list/`。
 7. 点击扩展图标，Edge 会打开 ACMCoder 侧栏。
 
 如果刚重新加载过扩展，第一次读取时可能遇到 `Could not establish connection. Receiving end does not exist.`。当前版本会自动注入 content script 并重试；如果仍失败，刷新一次 LeetCode 题目页再读。
@@ -35,37 +40,30 @@ npm start
 - 语言选择：Python、Java、C++17。
 - 代码区：基础高亮、Tab 缩进、括号/引号补齐、回车缩进。
 - 自测输入：`stdin` 和可选的预期输出。
-- 本地运行：调用 `POST http://127.0.0.1:43117/api/run`，可选择 Local 或 Docker runner，展示 `stdout`、`stderr` 和 AC/WA/RE/CE 等状态。Docker runner 缺少本地镜像时会自动构建 `acmcoder-runner:local`，除非设置了 `ACMCODER_DOCKER_AUTO_BUILD=0`。
+- 本地运行：调用 `POST http://127.0.0.1:43117/api/run`，可选择本机/内置环境或 Docker runner，展示 `stdout`、`stderr` 和 AC/WA/RE/CE 等状态。Docker runner 缺少本地镜像时会自动构建 `acmcoder-runner:local`，除非设置了 `ACMCODER_DOCKER_AUTO_BUILD=0`。如果 ACMCoder 服务本身来自 Docker app，侧栏会提示使用 `内置环境` 并禁用 Docker runner。
 - 缓存：侧栏关闭或切页后，最近题目、代码、输入和预期输出会尽量恢复。
 
 保存后，本地 ACMCoder Web 页面会轮询 `/api/memory/current` 并自动加载最新题目。
 
 ## 本地记忆文件
 
-默认追加写入：
+源码启动时默认追加写入：
 
 ```text
-E:\Projects\acmcoder\data\memory\pages.jsonl
+data/memory/pages.jsonl
 ```
 
 最近一次读取会同步写入：
 
 ```text
-E:\Projects\acmcoder\data\memory\current.json
+data/memory/current.json
 ```
 
 `data/memory/` 已加入 `.gitignore`，这是本机用户数据，不应该提交。
 
 ## LLM API Key
 
-侧栏里的 `LLM API Key` 当前只保存到浏览器本地存储，不会发送给任何远程服务。现在的读取、记忆和本地运行都不依赖 LLM。
-
-后续更适合让 LLM 做这些事：
-
-- 从 LeetCode 题面生成 ACM 输入输出协议。
-- 生成更贴题的 Python/Java/C++ 初始代码。
-- 根据 stderr/stdout 解释 WA/RE 原因。
-- 从本地记忆文件生成题目摘要和标签。
+侧栏里的 `LLM API Key` 会通过本地 ACMCoder 服务保存到 `data/memory/settings.json`。这个目录已被 git 忽略；Key 不参与判题，也不会覆盖代码。用户只有在主动请求模型建议时，本地服务才会把题目、代码和提问发给所配置的 OpenAI-compatible 模型接口。
 
 ## 技术边界
 

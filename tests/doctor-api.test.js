@@ -58,6 +58,27 @@ test("builds environment report with per-language runner recommendations", async
     java: "docker",
     cpp: "local",
   });
+  assert.equal(report.deployment.mode, "host");
+});
+
+test("marks Docker app reports as built-in execution instead of Docker runner deployment", async () => {
+  const report = await createEnvironmentReport({
+    env: { ACMCODER_DEPLOYMENT_MODE: "docker-app" },
+    listLanguages: () => ["python"],
+    checkToolchain: async (language) => toolchain(language, true),
+    checkDockerRunner: async () => ({
+      ready: false,
+      image: "acmcoder-runner:local",
+      message: "Docker CLI is not available.",
+    }),
+  });
+
+  assert.deepEqual(report.deployment, {
+    mode: "docker-app",
+    localRunnerLabel: "内置环境",
+    dockerRunnerAvailable: false,
+  });
+  assert.equal(report.recommendedRunnerByLanguage.python, "local");
 });
 
 test("serves environment doctor over the local API", async () => {

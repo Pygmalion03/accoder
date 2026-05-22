@@ -25,10 +25,20 @@ async function safeCheckToolchain(language, checkToolchain) {
   }
 }
 
+function buildDeploymentReport(env = process.env) {
+  const mode = env?.ACMCODER_DEPLOYMENT_MODE === "docker-app" ? "docker-app" : "host";
+  return {
+    mode,
+    localRunnerLabel: mode === "docker-app" ? "内置环境" : "本机环境",
+    dockerRunnerAvailable: mode !== "docker-app",
+  };
+}
+
 export async function createEnvironmentReport(options = {}) {
   const listLanguages = options.listLanguages || defaultListLanguages;
   const checkToolchain = options.checkToolchain || defaultCheckToolchain;
   const checkDockerRunner = options.checkDockerRunner || defaultCheckDockerRunner;
+  const deployment = buildDeploymentReport(options.env);
   const languages = listLanguages();
 
   const [toolchains, docker] = await Promise.all([
@@ -38,10 +48,14 @@ export async function createEnvironmentReport(options = {}) {
 
   const local = Object.fromEntries(toolchains.map((toolchain) => [toolchain.language, toolchain]));
   const recommendedRunnerByLanguage = Object.fromEntries(
-    toolchains.map((toolchain) => [toolchain.language, toolchain.ready ? "local" : docker.ready ? "docker" : "local"]),
+    toolchains.map((toolchain) => [
+      toolchain.language,
+      toolchain.ready || !deployment.dockerRunnerAvailable ? "local" : docker.ready ? "docker" : "local",
+    ]),
   );
 
   return {
+    deployment,
     local,
     docker,
     recommendedRunnerByLanguage,

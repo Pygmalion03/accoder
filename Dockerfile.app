@@ -21,6 +21,7 @@ RUN npm install --omit=dev --ignore-scripts
 COPY . .
 
 ENV ACMCODER_HOST=0.0.0.0
+ENV ACMCODER_DEPLOYMENT_MODE=docker-app
 ENV PORT=43117
 
 EXPOSE 43117

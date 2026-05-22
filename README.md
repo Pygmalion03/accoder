@@ -4,7 +4,12 @@
 
 ## 快速开始
 
-普通用户优先走 Docker app，不需要安装 Node.js、Java、C++ 或 Python，只需要 Docker Desktop：
+先分清两个概念：
+
+- **启动方式**决定 ACMCoder Web 服务在哪里跑。
+- **运行模式**决定你点 `Run` 时，代码交给哪套编译/运行环境。
+
+普通用户优先走 **Docker app**：Web 服务和 Java/C++/Python 工具链都在同一个 app 容器里。用户只需要 Docker Desktop，不需要另装 Node.js、Java、C++ 或 Python：
 
 ```bash
 git clone https://github.com/Pygmalion03/acmcoder.git
@@ -19,6 +24,8 @@ http://127.0.0.1:43117
 ```
 
 如果不想安装 Git，也可以在 GitHub 页面下载源码 ZIP，解压后在目录里运行同一条 `docker compose -f docker-compose.prebuilt.yml up -d`。
+
+进入页面后，Docker app 用户看到的运行模式是 `内置环境`。它就是 app 容器里自带的编译环境，直接选它运行代码；不要把它和下面的 `Docker runner` 混为一类。
 
 停止服务：
 
@@ -36,15 +43,13 @@ docker compose -f docker-compose.prebuilt.yml up -d
 
 ## 版本与发布物
 
-当前推荐版本是 `v2.1` / `v2.1.0`。
-
 这个项目有三类容易混淆的东西：
 
-- **源码分支**：例如 `v2.1`，包含 Web、CLI、题目数据、Dockerfile 和文档。
+- **源码分支**：例如 `v2.2`，包含 Web、CLI、题目数据、Dockerfile 和文档。分支可以先于正式发布版本更新。
 - **GitHub Release**：面向用户看的版本说明页。它不是 Docker 镜像本身，也不是运行必需条件。
 - **GHCR Docker package**：真正给 Docker 用户拉取的预构建镜像。
 
-目前 Docker 用户主要使用：
+`docker-compose.prebuilt.yml` 默认使用预构建 `app:latest`。如果要锁定某个已发布版本，再使用对应的镜像 tag。例如当前已有的版本化镜像：
 
 ```text
 ghcr.io/pygmalion03/acmcoder-app:latest
@@ -54,6 +59,14 @@ ghcr.io/pygmalion03/acmcoder-runner:v2.1.0
 ```
 
 Release 的价值是让用户在 GitHub 页面上看到“这是哪个版本、改了什么、应该怎么启动”。没有 Release 也不影响 Docker 镜像运行，但有 Release 更适合公开项目使用。
+
+三种常见使用方式：
+
+| 使用方式 | 需要用户先装什么 | Web 服务 | 点 Run 时的页面模式 |
+| --- | --- | --- | --- |
+| Docker app | Docker Desktop | Docker app 容器 | `内置环境` |
+| 源码 + 本机环境 | Node.js 和对应语言工具链 | 宿主机 Node.js | `本机环境` |
+| 源码 + Docker runner | Node.js、Docker Desktop | 宿主机 Node.js | `Docker runner` |
 
 ## 当前版本
 
@@ -72,14 +85,14 @@ Release 的价值是让用户在 GitHub 页面上看到“这是哪个版本、�
 npm install
 npm test
 node bin/acmcoder.js list
-node bin/acmcoder.js show two-sum
+node bin/acmcoder.js show reverse-linked-list
 node bin/acmcoder.js doctor
 ```
 
-运行 Python 模板：
+测试你自己的 Python 文件：
 
 ```bash
-node bin/acmcoder.js test two-sum --lang python --file problems/two-sum/templates/main.py
+node bin/acmcoder.js test reverse-linked-list --lang python --file path/to/your/main.py
 ```
 
 启动本地 Web：
@@ -93,6 +106,8 @@ npm start
 ```text
 http://127.0.0.1:43117
 ```
+
+源码模式下页面会扫描宿主机语言环境。宿主机已经有对应工具链时选 `本机环境`；如果只有 Node.js 和 Docker Desktop、不想在宿主机再装 Java/C++/Python，再选 `Docker runner`。
 
 ## Docker runner
 
@@ -117,14 +132,14 @@ export ACMCODER_DOCKER_IMAGE=ghcr.io/pygmalion03/acmcoder-runner:latest
 然后在 CLI 中显式选择 Docker：
 
 ```bash
-node bin/acmcoder.js test two-sum --lang python --file problems/two-sum/templates/main.py --runner docker
+node bin/acmcoder.js test reverse-linked-list --lang python --file path/to/your/main.py --runner docker
 ```
 
 如果不想让 ACMCoder 自动构建镜像，可以设置 `ACMCODER_DOCKER_AUTO_BUILD=0`。这时缺镜像会直接返回 `NO_RUNNER` 并提示手动构建命令。
 
 `node bin/acmcoder.js doctor` 会同时展示本地 Java/C++/Python 工具链和 Docker runner 状态，包括 Docker daemon 是否可用、配置的镜像是否已经存在或是否会在首次运行时自动构建。
 
-Web 页面也可以在运行模式里选择 Docker。Docker 模式会禁用容器网络，并限制 CPU、内存和进程数量。
+源码模式下 Web 页面也可以在运行模式里选择 Docker。Docker 模式会禁用容器网络，并限制 CPU、内存和进程数量。
 
 ## Docker Compose 应用启动
 
@@ -140,9 +155,11 @@ docker compose -f docker-compose.prebuilt.yml up -d
 http://127.0.0.1:43117
 ```
 
-这条路径默认使用用户本机已有的 Java/C++/Python 环境。下载源码本身不会修改用户的 Docker 配置，也不会安装本机编译环境。
+这条 Docker app 路径的 Web 服务和 Java/C++/Python 工具链都在 app 容器里。下载源码本身不会修改用户的 Docker 配置，也不会安装本机编译环境。
 
-这时 `app` 镜像会同时运行 Web 服务，并提供 Java、C++、Python 三套工具链；页面里选择 Local runner 即可运行代码。记忆题目、AC 次数和模型设置会保存在宿主机的 `data/memory` 目录。
+种子题初始代码只提供统一的 ACM 主程序骨架，不提供题解。用户需要按题目输入输出协议自己补解析、算法和输出。
+
+这时 `app` 镜像会同时运行 Web 服务，并提供 Java、C++、Python 三套工具链；页面里的运行模式会显示为 `内置环境`，选它即可运行代码。它不是 Docker runner，而是 app 容器里已经带好的编译环境。记忆题目、AC 次数和模型设置会保存在宿主机的 `data/memory` 目录。
 
 如果要从当前源码构建应用镜像，再运行：
 
@@ -168,7 +185,7 @@ docs/deployment.md
 
 ## 环境扫描与模型建议
 
-Web 页面和 Edge 侧边栏会调用 `/api/doctor` 显示 Python、Java、C++ 与 Docker runner 状态，并在用户还没有手动选择运行模式时按当前语言给出推荐。
+Web 页面和 Edge 侧边栏会调用 `/api/doctor` 显示 Python、Java、C++ 与 Docker runner 状态。源码模式下，如果用户还没有手动选择运行模式，页面会按当前语言给出推荐；Docker app 模式下页面会明确显示 `内置环境` 并禁用 Docker runner。
 
 模型建议是可选能力，不参与判题，也不会覆盖源代码。用户可以在页面里填写 API Key、Base URL 和 Model，服务端会通过 OpenAI-compatible `chat/completions` 接口请求建议。设置保存在 `data/memory/settings.json`，也可以通过 `ACMCODER_LLM_API_KEY`、`ACMCODER_LLM_BASE_URL`、`ACMCODER_LLM_MODEL` 配置。
 
@@ -228,6 +245,8 @@ Edge 插件目录：
 ```text
 extension/
 ```
+
+当前插件先走手动加载，不依赖 Edge 商店。下载源码或源码 ZIP 并解压后，在 Edge 打开 `edge://extensions/`，开启开发人员模式，点击“加载解压缩的扩展”，选择项目里的 `extension/` 目录。
 
 加载说明见：
 

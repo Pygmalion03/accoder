@@ -108,6 +108,15 @@ test("web UI shows environment doctor status for runner modes", () => {
   assert.match(css, /\.runner-health\.warn/);
 });
 
+test("web UI explains Docker app uses its built-in environment", () => {
+  const script = fs.readFileSync("web/app.js", "utf8");
+
+  assert.match(script, /deployment\?\.mode === "docker-app"/);
+  assert.match(script, /当前运行在 Docker app 容器中/);
+  assert.match(script, /内置环境/);
+  assert.match(script, /dockerOption\.disabled/);
+});
+
 test("web UI exposes lightweight optional model advice", () => {
   const html = fs.readFileSync("web/index.html", "utf8");
   const script = fs.readFileSync("web/app.js", "utf8");
