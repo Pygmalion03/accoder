@@ -49,13 +49,13 @@ docker compose -f docker-compose.prebuilt.yml up -d
 - **GitHub Release**：面向用户看的版本说明页。它不是 Docker 镜像本身，也不是运行必需条件。
 - **GHCR Docker package**：真正给 Docker 用户拉取的预构建镜像。
 
-`docker-compose.prebuilt.yml` 默认使用预构建 `app:latest`。如果要锁定某个已发布版本，再使用对应的镜像 tag。例如当前已有的版本化镜像：
+`docker-compose.prebuilt.yml` 默认使用预构建 `app:latest`。如果要锁定当前发布版本，可以使用对应的镜像 tag：
 
 ```text
 ghcr.io/pygmalion03/acmcoder-app:latest
-ghcr.io/pygmalion03/acmcoder-app:v2.1.0
+ghcr.io/pygmalion03/acmcoder-app:v2.2.0
 ghcr.io/pygmalion03/acmcoder-runner:latest
-ghcr.io/pygmalion03/acmcoder-runner:v2.1.0
+ghcr.io/pygmalion03/acmcoder-runner:v2.2.0
 ```
 
 Release 的价值是让用户在 GitHub 页面上看到“这是哪个版本、改了什么、应该怎么启动”。没有 Release 也不影响 Docker 镜像运行，但有 Release 更适合公开项目使用。
