@@ -7,7 +7,7 @@
 1. 插件确认当前 URL 是 `leetcode.cn/problems/<slug>/` 或 `leetcode.com/problems/<slug>/`。
 2. content script 读取题目标题、难度、标签、正文和第一个样例。优先通过 background service worker 请求 `https://leetcode.cn/graphql/`，拿中文标题和中文标签。
 3. 用户开启“记忆模式”后，读取成功会自动发送到本地服务。
-4. 本地服务保存 JSONL，并维护一份 `current.json` 给 ACMCoder Web 自动加载。
+4. 本地服务保存 JSONL，并维护一份 `current.json` 给 ACCoder Web 自动加载。
 5. 插件侧栏不展示完整题面，只提供 ACM 练习工作区。
 
 ## 本地接口
@@ -55,7 +55,7 @@ GET http://127.0.0.1:43117/api/memory/current
 - 当前题目、当前语言下的代码、stdin 和预期输出。
 - LLM API Key。
 
-ACMCoder Web 使用 `localStorage` 缓存：
+ACCoder Web 使用 `localStorage` 缓存：
 
 - 当前题目。
 - 语言选择。
@@ -65,6 +65,6 @@ ACMCoder Web 使用 `localStorage` 缓存：
 
 LeetCode 的 DOM 结构可能变化，所以读取逻辑必须保留 fallback。GraphQL 也可能因为站点策略调整而失败，失败时仍应尽量从页面可见文本中提取可用信息。
 
-侧栏的启用范围要收紧在 LeetCode 题目页 tab。用户切换到其他普通网页 tab 时，不应该让 ACMCoder 侧栏继续跟过去。
+侧栏的启用范围要收紧在 LeetCode 题目页 tab。用户切换到其他普通网页 tab 时，不应该让 ACCoder 侧栏继续跟过去。
 
 插件不直接写本地文件，而是请求本地 Node 服务。这样安全边界更清楚，用户也能明确知道数据只保存在本机项目目录下。

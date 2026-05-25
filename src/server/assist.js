@@ -8,9 +8,9 @@ const DEFAULT_MODEL = "gpt-4.1-mini";
 
 export function getDefaultAssistSettings(env = process.env) {
   return {
-    apiKey: env.ACMCODER_LLM_API_KEY || "",
-    baseUrl: env.ACMCODER_LLM_BASE_URL || DEFAULT_BASE_URL,
-    model: env.ACMCODER_LLM_MODEL || DEFAULT_MODEL,
+    apiKey: env.ACCODER_LLM_API_KEY || "",
+    baseUrl: env.ACCODER_LLM_BASE_URL || DEFAULT_BASE_URL,
+    model: env.ACCODER_LLM_MODEL || DEFAULT_MODEL,
   };
 }
 
@@ -127,7 +127,7 @@ export async function requestCodeAdvice(options = {}) {
         {
           role: "system",
           content:
-            "你是 ACMCoder 的编程练习助手。用户可能会闲聊、询问题目、请求代码建议或分析运行错误。不要声称已经修改源代码。",
+            "你是 ACCoder 的编程练习助手。用户可能会闲聊、询问题目、请求代码建议或分析运行错误。不要声称已经修改源代码。",
         },
         {
           role: "user",

@@ -148,7 +148,7 @@ async function serveStatic(requestUrl, response) {
   }
 }
 
-export function createAcmcoderServer(options = {}) {
+export function createAccoderServer(options = {}) {
   const memoryFile = options.memoryFile || getDefaultMemoryFile();
   const currentMemoryFile = options.currentMemoryFile || getDefaultCurrentMemoryFile();
   const deletedProblemsFile = options.deletedProblemsFile || getDefaultDeletedProblemsFile();
@@ -248,7 +248,7 @@ export function createAcmcoderServer(options = {}) {
           deletedProblemsFile,
           progressFile,
         });
-        sendJsonDownload(response, `acmcoder-problems-${new Date().toISOString().slice(0, 10)}.json`, body);
+        sendJsonDownload(response, `accoder-problems-${new Date().toISOString().slice(0, 10)}.json`, body);
         return;
       }
 
@@ -307,7 +307,7 @@ export function createAcmcoderServer(options = {}) {
         const slugs = (requestUrl.searchParams.get("slugs") || "").split(",");
         const body = await exportMemoryPages({ slugs }, memoryFile);
         body.pages = await serializePagesWithProgress(body.pages, progressFile);
-        sendJsonDownload(response, `acmcoder-memory-${new Date().toISOString().slice(0, 10)}.json`, body);
+        sendJsonDownload(response, `accoder-memory-${new Date().toISOString().slice(0, 10)}.json`, body);
         return;
       }
 
@@ -344,13 +344,13 @@ export function createAcmcoderServer(options = {}) {
 }
 
 export function getServerHost(env = process.env) {
-  return env.ACMCODER_HOST?.trim() || "127.0.0.1";
+  return env.ACCODER_HOST?.trim() || "127.0.0.1";
 }
 
 export function startServer(port = DEFAULT_PORT, host = getServerHost()) {
-  const server = createAcmcoderServer();
+  const server = createAccoderServer();
   server.listen(port, host, () => {
-    console.log(`ACMCoder is running at http://${host}:${port}`);
+    console.log(`ACCoder is running at http://${host}:${port}`);
   });
   return server;
 }

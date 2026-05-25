@@ -1,9 +1,9 @@
 const LOCAL_BASE = "http://127.0.0.1:43117";
 const STORAGE_KEYS = {
-  memoryMode: "acmcoder.memoryMode",
-  lastPage: "acmcoder.lastPage",
-  language: "acmcoder.sidebar.language",
-  runner: "acmcoder.sidebar.runner",
+  memoryMode: "accoder.memoryMode",
+  lastPage: "accoder.lastPage",
+  language: "accoder.sidebar.language",
+  runner: "accoder.sidebar.runner",
 };
 
 const GENERIC_TEMPLATES = {
@@ -340,7 +340,7 @@ async function markPanelOpened() {
   }
 
   await sendRuntimeMessage({
-    type: "ACMCODER_PANEL_OPENED",
+    type: "ACCODER_PANEL_OPENED",
     tabId: tab.id,
     url: tab.url || "",
   });
@@ -384,7 +384,7 @@ function ensureContentScript(tabId) {
 
 async function captureFromTab(tabId) {
   try {
-    return await sendTabMessage(tabId, { type: "ACMCODER_CAPTURE" });
+    return await sendTabMessage(tabId, { type: "ACCODER_CAPTURE" });
   } catch (error) {
     if (!isMissingReceiverError(error)) {
       throw error;
@@ -392,7 +392,7 @@ async function captureFromTab(tabId) {
 
     setStatus("页面脚本未连接，正在自动注入后重试...", "");
     await ensureContentScript(tabId);
-    return sendTabMessage(tabId, { type: "ACMCODER_CAPTURE" });
+    return sendTabMessage(tabId, { type: "ACCODER_CAPTURE" });
   }
 }
 
@@ -454,7 +454,7 @@ function syncLineNumbers() {
 
 function sidebarWorkspaceKey(page = capturedPage) {
   const slug = page?.slug || "scratch";
-  return `acmcoder.sidebar.workspace.${slug}.${elements.language.value}`;
+  return `accoder.sidebar.workspace.${slug}.${elements.language.value}`;
 }
 
 async function saveWorkspaceCache() {
@@ -596,7 +596,7 @@ async function saveCapturedPage() {
   capturedPage = { ...capturedPage, progress: body.page.progress };
   renderProgress(body.page.progress);
   await cachePage(capturedPage);
-  setStatus(`已记忆到本地：${body.page.slug}。ACMCoder 页面会自动加载。`, "ok");
+  setStatus(`已记忆到本地：${body.page.slug}。ACCoder 页面会自动加载。`, "ok");
 }
 
 async function runCode() {
@@ -635,7 +635,7 @@ async function runCode() {
   } catch (error) {
     setRunResult({
       status: "ERROR",
-      message: error.message || "运行失败，请确认本地 ACMCoder 服务已启动。",
+      message: error.message || "运行失败，请确认本地 ACCoder 服务已启动。",
       stdout: "",
       stderr: "",
     });

@@ -13,7 +13,7 @@ import {
 } from "../src/server/assist.js";
 
 test("stores optional model settings locally without exposing the API key", async () => {
-  const settingsFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-assist-")), "settings.json");
+  const settingsFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "accoder-assist-")), "settings.json");
 
   await saveAssistSettings(
     {
@@ -86,7 +86,7 @@ test("requests lightweight code advice through an OpenAI-compatible chat endpoin
   assert.equal(payload.model, "coder-model");
   assert.equal(
     payload.messages[0].content,
-    "你是 ACMCoder 的编程练习助手。用户可能会闲聊、询问题目、请求代码建议或分析运行错误。不要声称已经修改源代码。",
+    "你是 ACCoder 的编程练习助手。用户可能会闲聊、询问题目、请求代码建议或分析运行错误。不要声称已经修改源代码。",
   );
   assert.match(payload.messages[1].content, /print\(nums\[0\]\)/);
   assert.match(payload.messages[1].content, /这段代码哪里可能错/);

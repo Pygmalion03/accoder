@@ -1,4 +1,4 @@
-# ACMCoder MVP Implementation Plan
+# ACCoder MVP Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -22,7 +22,7 @@
 - `src/runner/toolchains.js`: language definitions and toolchain checks.
 - `src/runner/run.js`: compile, execute, timeout, and evaluate submissions.
 - `src/server/server.js`: local HTTP API and static file server.
-- `bin/acmcoder.js`: CLI command parser.
+- `bin/accoder.js`: CLI command parser.
 - `web/index.html`, `web/styles.css`, `web/app.js`: local workbench.
 - `tests/*.test.js`: core behavior tests.
 
@@ -103,7 +103,7 @@ Expected: all tests pass.
 ## Task 4: CLI
 
 **Files:**
-- Create: `bin/acmcoder.js`
+- Create: `bin/accoder.js`
 
 - [ ] **Step 1: Add CLI commands**
 
@@ -111,11 +111,11 @@ Support `list`, `show <slug>`, `doctor`, `test <slug> --lang <lang> --file <path
 
 - [ ] **Step 2: Run CLI smoke checks**
 
-Run: `node bin/acmcoder.js list`
+Run: `node bin/accoder.js list`
 
 Expected: prints the 5 seed problems.
 
-Run: `node bin/acmcoder.js show two-sum`
+Run: `node bin/accoder.js show two-sum`
 
 Expected: prints the ACM input and output protocol.
 
@@ -154,13 +154,13 @@ Expected: all tests pass.
 
 - [ ] **Step 2: Run CLI smoke tests**
 
-Run: `node bin/acmcoder.js list`
+Run: `node bin/accoder.js list`
 
 Expected: problem list prints without error.
 
 - [ ] **Step 3: Run a real Python sample if Python is installed**
 
-Run: `node bin/acmcoder.js test two-sum --lang python --file problems/two-sum/templates/main.py`
+Run: `node bin/accoder.js test two-sum --lang python --file problems/two-sum/templates/main.py`
 
 Expected: either `AC` if Python is available or a clear toolchain error if Python is not available.
 

@@ -145,7 +145,7 @@ export async function exportMemoryPages({ slugs = [] } = {}, memoryFile = defaul
   const filteredPages = slugSet ? pages.filter((page) => slugSet.has(page.slug)) : pages;
 
   return {
-    format: "acmcoder-memory-v1",
+    format: "accoder-memory-v1",
     exportedAt: new Date().toISOString(),
     pages: latestPagesBySlug(filteredPages),
   };

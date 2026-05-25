@@ -1,7 +1,7 @@
 const SIDE_PANEL_PATH = "sidebar.html";
 const LEETCODE_CN_ORIGIN = "https://leetcode.cn";
 const LOCAL_BASE = "http://127.0.0.1:43117";
-const OPENED_TABS_KEY = "acmcoder.openedSidePanelTabs";
+const OPENED_TABS_KEY = "accoder.openedSidePanelTabs";
 const openedTabs = new Set();
 
 const QUESTION_QUERY = `query questionData($titleSlug: String!) {
@@ -87,13 +87,13 @@ async function restoreSidePanelForTab(tabId, url = "") {
   await updateSidePanelForTab(tabId, url);
 }
 
-async function openLocalAcmcoderTab() {
+async function openLocalAccoderTab() {
   await chrome.tabs.create({ url: LOCAL_BASE }).catch(() => {});
 }
 
-async function openAcmcoderForTab(tab) {
+async function openAccoderForTab(tab) {
   if (!tab?.id || !isLeetCodeProblemUrl(tab.url || "")) {
-    await openLocalAcmcoderTab();
+    await openLocalAccoderTab();
     return;
   }
 
@@ -175,11 +175,11 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 });
 
 chrome.action.onClicked.addListener((tab) => {
-  openAcmcoderForTab(tab);
+  openAccoderForTab(tab);
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type === "ACMCODER_PANEL_OPENED") {
+  if (message?.type === "ACCODER_PANEL_OPENED") {
     Promise.resolve()
       .then(async () => {
         if (!message.tabId || !isLeetCodeProblemUrl(message.url)) {
@@ -193,7 +193,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
-  if (message?.type !== "ACMCODER_FETCH_QUESTION_DATA") {
+  if (message?.type !== "ACCODER_FETCH_QUESTION_DATA") {
     return false;
   }
 

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { createEnvironmentReport } from "../src/server/doctor.js";
-import { createAcmcoderServer } from "../src/server/server.js";
+import { createAccoderServer } from "../src/server/server.js";
 
 function listen(server) {
   return new Promise((resolve) => {
@@ -44,7 +44,7 @@ test("builds environment report with per-language runner recommendations", async
     },
     checkDockerRunner: async () => ({
       ready: true,
-      image: "acmcoder-runner:local",
+      image: "accoder-runner:local",
       message: "Docker daemon ready; image will be built automatically.",
     }),
   });
@@ -63,12 +63,12 @@ test("builds environment report with per-language runner recommendations", async
 
 test("marks Docker app reports as built-in execution instead of Docker runner deployment", async () => {
   const report = await createEnvironmentReport({
-    env: { ACMCODER_DEPLOYMENT_MODE: "docker-app" },
+    env: { ACCODER_DEPLOYMENT_MODE: "docker-app" },
     listLanguages: () => ["python"],
     checkToolchain: async (language) => toolchain(language, true),
     checkDockerRunner: async () => ({
       ready: false,
-      image: "acmcoder-runner:local",
+      image: "accoder-runner:local",
       message: "Docker CLI is not available.",
     }),
   });
@@ -82,7 +82,7 @@ test("marks Docker app reports as built-in execution instead of Docker runner de
 });
 
 test("serves environment doctor over the local API", async () => {
-  const server = createAcmcoderServer({
+  const server = createAccoderServer({
     listLanguages: () => ["python", "java"],
     checkToolchain: async (language) => {
       if (language === "java") return toolchain(language, false, ["javac", "java"]);
@@ -90,7 +90,7 @@ test("serves environment doctor over the local API", async () => {
     },
     checkDockerRunner: async () => ({
       ready: false,
-      image: "custom/acmcoder-runner:test",
+      image: "custom/accoder-runner:test",
       message: "Docker daemon is not running.",
     }),
   });
@@ -103,7 +103,7 @@ test("serves environment doctor over the local API", async () => {
     assert.equal(response.status, 200);
     assert.equal(body.local.python.ready, true);
     assert.deepEqual(body.local.java.missingCommands, ["javac", "java"]);
-    assert.equal(body.docker.image, "custom/acmcoder-runner:test");
+    assert.equal(body.docker.image, "custom/accoder-runner:test");
     assert.equal(body.recommendedRunnerByLanguage.java, "local");
   } finally {
     server.close();

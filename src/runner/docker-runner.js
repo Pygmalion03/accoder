@@ -1,11 +1,11 @@
 import { runProcess } from "./process.js";
 import { projectRoot } from "../core/problems.js";
 
-export const DOCKER_IMAGE = "acmcoder-runner:local";
+export const DOCKER_IMAGE = "accoder-runner:local";
 export const DOCKER_WORKDIR = "/workspace";
 
 export function getDockerImage(env = process.env) {
-  const image = env?.ACMCODER_DOCKER_IMAGE?.trim();
+  const image = env?.ACCODER_DOCKER_IMAGE?.trim();
   return image || DOCKER_IMAGE;
 }
 
@@ -18,7 +18,7 @@ export function buildDockerImageArgs(image = getDockerImage()) {
 }
 
 export function isDockerAutoBuildEnabled(env = process.env) {
-  return String(env?.ACMCODER_DOCKER_AUTO_BUILD ?? "1") !== "0";
+  return String(env?.ACCODER_DOCKER_AUTO_BUILD ?? "1") !== "0";
 }
 
 export function shellQuote(value) {

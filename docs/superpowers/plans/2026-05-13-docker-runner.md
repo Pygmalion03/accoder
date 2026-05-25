@@ -6,7 +6,7 @@
 
 **Architecture:** Keep `runSubmission()` as the public orchestration API, but move process execution behind runner adapters. `local` keeps the existing host-toolchain behavior; `docker` maps the same toolchain commands into `/workspace` and executes them through `docker run` with resource limits.
 
-**Tech Stack:** Node.js ESM, built-in `node:test`, Docker CLI, local Dockerfile image `acmcoder-runner:local`, existing Web/CLI/server code.
+**Tech Stack:** Node.js ESM, built-in `node:test`, Docker CLI, local Dockerfile image `accoder-runner:local`, existing Web/CLI/server code.
 
 ---
 
@@ -17,7 +17,7 @@
 - Create `src/runner/docker-runner.js`: Docker command builder, Docker error classifier, Docker execution adapter.
 - Create `src/runner/runners.js`: runner constants, validation, adapter lookup.
 - Modify `src/runner/run.js`: use selected runner adapter and keep comparison/status logic centralized.
-- Modify `bin/acmcoder.js`: pass optional `--runner` into `runProblemCases()` and `runSubmission()`.
+- Modify `bin/accoder.js`: pass optional `--runner` into `runProblemCases()` and `runSubmission()`.
 - Modify `src/server/server.js`: allow `/api/run` to pass `runner`; add a test injection hook for run behavior.
 - Modify `web/index.html`, `web/app.js`, `web/styles.css`: add `Local` / `Docker` selector and send it in run requests.
 - Create `tests/runners.test.js`: runner selection and default behavior.
@@ -288,7 +288,7 @@ test("quotes shell arguments for bash -lc", () => {
 
 test("builds docker run arguments with resource limits and stdin", () => {
   const args = buildDockerArgs({
-    hostWorkdir: "E:\\Projects\\acmcoder\\tmp",
+    hostWorkdir: "E:\\Projects\\accoder\\tmp",
     commandSpec: {
       command: "python",
       args: ["/workspace/main.py"],
@@ -307,7 +307,7 @@ test("builds docker run arguments with resource limits and stdin", () => {
   assert.ok(args.includes("128"));
   assert.ok(args.includes("-w"));
   assert.ok(args.includes("/workspace"));
-  assert.ok(args.includes("acmcoder-runner:local"));
+  assert.ok(args.includes("accoder-runner:local"));
   assert.equal(args.at(-3), "bash");
   assert.equal(args.at(-2), "-lc");
   assert.equal(args.at(-1), "'python' '/workspace/main.py'");
@@ -326,11 +326,11 @@ test("classifies missing docker command as unavailable runner", () => {
 test("classifies missing local image as unavailable runner", () => {
   const result = classifyDockerUnavailable({
     code: 125,
-    stderr: "Unable to find image 'acmcoder-runner:local' locally\npull access denied",
+    stderr: "Unable to find image 'accoder-runner:local' locally\npull access denied",
   });
 
   assert.equal(result.status, "NO_RUNNER");
-  assert.match(result.message, /docker build -t acmcoder-runner:local ./);
+  assert.match(result.message, /docker build -t accoder-runner:local ./);
 });
 
 test("docker runner resolves paths inside the workspace", () => {
@@ -356,7 +356,7 @@ Create `src/runner/docker-runner.js`:
 ```js
 import { runProcess } from "./process.js";
 
-export const DOCKER_IMAGE = "acmcoder-runner:local";
+export const DOCKER_IMAGE = "accoder-runner:local";
 export const DOCKER_WORKDIR = "/workspace";
 
 export function shellQuote(value) {
@@ -410,14 +410,14 @@ export function classifyDockerUnavailable(result) {
   if (/Unable to find image|pull access denied|repository does not exist/i.test(stderr)) {
     return {
       status: "NO_RUNNER",
-      message: "Docker runner image is missing. Run: docker build -t acmcoder-runner:local .",
+      message: "Docker runner image is missing. Run: docker build -t accoder-runner:local .",
     };
   }
 
   if (result.code === 125) {
     return {
       status: "NO_RUNNER",
-      message: "Docker runner failed to start. Check Docker Desktop and the acmcoder-runner:local image.",
+      message: "Docker runner failed to start. Check Docker Desktop and the accoder-runner:local image.",
     };
   }
 
@@ -485,7 +485,7 @@ git commit -m "Add docker runner adapter"
 ### Task 3: Wire Runner Mode Through CLI And Server API
 
 **Files:**
-- Modify: `bin/acmcoder.js`
+- Modify: `bin/accoder.js`
 - Modify: `src/server/server.js`
 - Modify: `tests/cli-args.test.js`
 - Modify: `tests/server.test.js`
@@ -515,7 +515,7 @@ Append to `tests/server.test.js`:
 ```js
 test("passes runner mode from run API into the runner layer", async () => {
   const calls = [];
-  const server = createAcmcoderServer({
+  const server = createAccoderServer({
     runSubmission: async (options) => {
       calls.push(options);
       return {
@@ -559,15 +559,15 @@ Run:
 node --test tests/cli-args.test.js tests/server.test.js
 ```
 
-Expected: CLI parse test passes because parser is generic; server test fails until `createAcmcoderServer()` supports injected `runSubmission`.
+Expected: CLI parse test passes because parser is generic; server test fails until `createAccoderServer()` supports injected `runSubmission`.
 
 - [ ] **Step 4: Pass runner through CLI**
 
-In `bin/acmcoder.js`, update help text:
+In `bin/accoder.js`, update help text:
 
 ```text
-node bin/acmcoder.js test <slug> --lang <java|cpp|python> --file <path> [--runner <local|docker>]
-node bin/acmcoder.js run <slug> --lang <java|cpp|python> --file <path> --input <path> [--expected <path>] [--runner <local|docker>]
+node bin/accoder.js test <slug> --lang <java|cpp|python> --file <path> [--runner <local|docker>]
+node bin/accoder.js run <slug> --lang <java|cpp|python> --file <path> --input <path> [--expected <path>] [--runner <local|docker>]
 ```
 
 Update `test` command call:
@@ -598,7 +598,7 @@ Modify `src/server/server.js`:
 import { runSubmission as defaultRunSubmission } from "../runner/run.js";
 ```
 
-Inside `createAcmcoderServer(options = {})`:
+Inside `createAccoderServer(options = {})`:
 
 ```js
 const runSubmission = options.runSubmission || defaultRunSubmission;
@@ -630,7 +630,7 @@ Expected: selected tests pass.
 - [ ] **Step 7: Commit Task 3**
 
 ```bash
-git add bin/acmcoder.js src/server/server.js tests/cli-args.test.js tests/server.test.js
+git add bin/accoder.js src/server/server.js tests/cli-args.test.js tests/server.test.js
 git commit -m "Wire runner mode through CLI and API"
 ```
 
@@ -659,7 +659,7 @@ test("web UI exposes local and docker runner modes", () => {
   assert.match(html, /value="docker"/);
   assert.match(script, /runner:\s*document\.querySelector\("#runner"\)/);
   assert.match(script, /runner:\s*elements\.runner\.value/);
-  assert.match(script, /acmcoder\.web\.runner/);
+  assert.match(script, /accoder\.web\.runner/);
   assert.match(css, /\.status\.NO_RUNNER/);
 });
 ```
@@ -693,7 +693,7 @@ In `web/index.html`, add this label after the language selector:
 In `web/app.js`, add cache key:
 
 ```js
-runner: "acmcoder.web.runner",
+runner: "accoder.web.runner",
 ```
 
 Add element:
@@ -832,13 +832,13 @@ In `README.md`, add a Docker runner section after the local Web instructions:
 如果本机没有 Java、C++ 或 Python 工具链，但已经安装 Docker，可以先构建本地 runner 镜像：
 
 ```bash
-docker build -t acmcoder-runner:local .
+docker build -t accoder-runner:local .
 ```
 
 然后在 CLI 中显式选择 Docker：
 
 ```bash
-node bin/acmcoder.js test two-sum --lang python --file problems/two-sum/templates/main.py --runner docker
+node bin/accoder.js test two-sum --lang python --file problems/two-sum/templates/main.py --runner docker
 ```
 
 Web 页面也可以在运行模式里选择 Docker。Docker 模式会禁用容器网络，并限制 CPU、内存和进程数量。
@@ -893,8 +893,8 @@ Expected: clean working tree on `v1`, ahead of `origin/v1` by the implementation
 Run:
 
 ```bash
-docker build -t acmcoder-runner:local .
-node bin/acmcoder.js test two-sum --lang python --file problems/two-sum/templates/main.py --runner docker
+docker build -t accoder-runner:local .
+node bin/accoder.js test two-sum --lang python --file problems/two-sum/templates/main.py --runner docker
 ```
 
 Expected: build succeeds and the sample case returns `AC`. If Docker is unavailable in the current machine, record that only non-Docker unit tests were run.
@@ -905,7 +905,7 @@ Summarize:
 
 ```text
 Implemented explicit local/docker runner selection.
-Docker runner uses acmcoder-runner:local with network, CPU, memory, and PID limits.
+Docker runner uses accoder-runner:local with network, CPU, memory, and PID limits.
 CLI, API, and Web all pass runner mode through the same runner layer.
 Validation: npm test, plus Docker smoke test if available.
 ```

@@ -40,7 +40,7 @@ test("parses optional runner mode", () => {
 });
 
 test("doctor reports Docker runner status", () => {
-  const script = fs.readFileSync("bin/acmcoder.js", "utf8");
+  const script = fs.readFileSync("bin/accoder.js", "utf8");
 
   assert.match(script, /checkDockerRunner/);
   assert.match(script, /Docker runner:/);

@@ -32,7 +32,7 @@ test("background hides the panel on other tabs and restores tabs that opened it"
   assert.match(script, /chrome\.tabs\.onRemoved\.addListener/);
   assert.match(script, /forgetOpenedTab\(tabId\)/);
   assert.match(script, /chrome\.action\.onClicked/);
-  assert.match(script, /openAcmcoderForTab/);
+  assert.match(script, /openAccoderForTab/);
   assert.match(script, /chrome\.sidePanel\.open\(\{\s*tabId/);
   assert.match(script, /const shouldOpen = isLeetCodeProblemUrl\(url\) && openedTabs\.has\(tabId\)/);
   assert.match(script, /enabled:\s*shouldOpen/);
@@ -45,7 +45,7 @@ test("background hides the panel on other tabs and restores tabs that opened it"
   assert.doesNotMatch(script, /^configureSidePanelDefaults\(\);/m);
   assert.match(script, /chrome\.tabs\.onUpdated/);
   assert.match(script, /chrome\.tabs\.onActivated/);
-  assert.match(script, /ACMCODER_PANEL_OPENED/);
+  assert.match(script, /ACCODER_PANEL_OPENED/);
   assert.doesNotMatch(script, /openPanelOnActionClick/);
   assert.doesNotMatch(script, /setPanelBehavior/);
 });
@@ -68,7 +68,7 @@ test("edge sidebar keeps only compact capture status plus the practice panel", (
 test("content script reads question metadata from leetcode", () => {
   const script = fs.readFileSync("extension/content-script.js", "utf8");
 
-  assert.match(script, /ACMCODER_CAPTURE/);
+  assert.match(script, /ACCODER_CAPTURE/);
   assert.match(script, /captureLeetCodeProblem/);
   assert.match(script, /fetchQuestionData/);
   assert.match(script, /LEETCODE_CN_ORIGIN/);
@@ -94,7 +94,7 @@ test("sidebar caches the last captured problem", () => {
 
   assert.match(script, /lastPage/);
   assert.match(script, /loadCachedPage/);
-  assert.match(script, /ACMCODER_PANEL_OPENED/);
+  assert.match(script, /ACCODER_PANEL_OPENED/);
 });
 
 test("sidebar can run code through the local runner", () => {
@@ -109,7 +109,7 @@ test("sidebar can run code through the local runner", () => {
   assert.match(script, /runCode/);
   assert.match(script, /api\/run/);
   assert.match(script, /sidebarWorkspaceKey/);
-  assert.match(script, /runner:\s*"acmcoder\.sidebar\.runner"/);
+  assert.match(script, /runner:\s*"accoder\.sidebar\.runner"/);
   assert.match(script, /runner:\s*document\.querySelector\("#runner"\)/);
   assert.match(script, /runner:\s*elements\.runner\.value/);
   assert.match(script, /Running \$\{elements\.runner\.value\} runner/);

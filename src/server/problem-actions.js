@@ -108,7 +108,7 @@ export async function exportProblems({ slugs = [], problems = [], memoryFile, de
     .map((problem) => ({ ...problem, progress: progressForSlug(problem.slug, progressItems) }));
 
   return {
-    format: "acmcoder-problems-v1",
+    format: "accoder-problems-v1",
     exportedAt: new Date().toISOString(),
     problems: [...visibleSeedProblems, ...memoryProblems],
   };
@@ -131,11 +131,11 @@ function memoryPageFromProblem(problem) {
 }
 
 function importedPagesFromPayload(payload) {
-  if (payload?.format === "acmcoder-memory-v1") {
+  if (payload?.format === "accoder-memory-v1") {
     return Array.isArray(payload.pages) ? payload.pages : [];
   }
 
-  if (payload?.format === "acmcoder-problems-v1") {
+  if (payload?.format === "accoder-problems-v1") {
     return Array.isArray(payload.problems)
       ? payload.problems
           .filter((problem) => problem?.source === "memory" || String(problem?.slug || "").startsWith("memory:"))
@@ -147,7 +147,7 @@ function importedPagesFromPayload(payload) {
 }
 
 function importedSeedSlugsFromPayload(payload, problems = []) {
-  if (payload?.format !== "acmcoder-problems-v1") {
+  if (payload?.format !== "accoder-problems-v1") {
     return [];
   }
 
@@ -161,13 +161,13 @@ function importedSeedSlugsFromPayload(payload, problems = []) {
 }
 
 function importedProgressEntriesFromPayload(payload) {
-  if (payload?.format === "acmcoder-memory-v1") {
+  if (payload?.format === "accoder-memory-v1") {
     return Array.isArray(payload.pages)
       ? payload.pages.map((page) => ({ slug: page?.slug, progress: page?.progress })).filter((entry) => entry.progress)
       : [];
   }
 
-  if (payload?.format === "acmcoder-problems-v1") {
+  if (payload?.format === "accoder-problems-v1") {
     return Array.isArray(payload.problems)
       ? payload.problems
           .map((problem) => ({ slug: problem?.slug || problem?.leetcode?.slug, progress: problem?.progress }))

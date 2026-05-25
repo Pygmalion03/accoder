@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { createAcmcoderServer, getServerHost } from "../src/server/server.js";
+import { createAccoderServer, getServerHost } from "../src/server/server.js";
 
 function listen(server) {
   return new Promise((resolve) => {
@@ -42,8 +42,8 @@ async function saveMemoryPage(port, page) {
 }
 
 test("serves problem metadata over the local API", async () => {
-  const deletedProblemsFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-problems-")), "deleted-problems.json");
-  const server = createAcmcoderServer({ deletedProblemsFile });
+  const deletedProblemsFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "accoder-problems-")), "deleted-problems.json");
+  const server = createAccoderServer({ deletedProblemsFile });
   const port = await listen(server);
 
   try {
@@ -59,8 +59,8 @@ test("serves problem metadata over the local API", async () => {
 });
 
 test("serves one problem by slug", async () => {
-  const deletedProblemsFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-problems-")), "deleted-problems.json");
-  const server = createAcmcoderServer({ deletedProblemsFile });
+  const deletedProblemsFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "accoder-problems-")), "deleted-problems.json");
+  const server = createAccoderServer({ deletedProblemsFile });
   const port = await listen(server);
 
   try {
@@ -75,14 +75,14 @@ test("serves one problem by slug", async () => {
 });
 
 test("handles extension CORS preflight for memory mode", async () => {
-  const server = createAcmcoderServer();
+  const server = createAccoderServer();
   const port = await listen(server);
 
   try {
     const response = await fetch(`http://127.0.0.1:${port}/api/memory/pages`, {
       method: "OPTIONS",
       headers: {
-        origin: "chrome-extension://acmcoder",
+        origin: "chrome-extension://accoder",
         "access-control-request-method": "POST",
       },
     });
@@ -95,9 +95,9 @@ test("handles extension CORS preflight for memory mode", async () => {
 });
 
 test("stores captured LeetCode page memory locally", async () => {
-  const memoryFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-memory-")), "pages.jsonl");
+  const memoryFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "accoder-memory-")), "pages.jsonl");
   const currentMemoryFile = path.join(path.dirname(memoryFile), "current.json");
-  const server = createAcmcoderServer({ memoryFile, currentMemoryFile });
+  const server = createAccoderServer({ memoryFile, currentMemoryFile });
   const port = await listen(server);
 
   try {
@@ -146,8 +146,8 @@ test("stores captured LeetCode page memory locally", async () => {
 });
 
 test("exposes memory storage location for the extension sidebar", async () => {
-  const memoryFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-memory-")), "pages.jsonl");
-  const server = createAcmcoderServer({ memoryFile });
+  const memoryFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "accoder-memory-")), "pages.jsonl");
+  const server = createAccoderServer({ memoryFile });
   const port = await listen(server);
 
   try {
@@ -163,13 +163,13 @@ test("exposes memory storage location for the extension sidebar", async () => {
 
 test("server binds to localhost by default and can be opened for Docker port publishing", () => {
   assert.equal(getServerHost({}), "127.0.0.1");
-  assert.equal(getServerHost({ ACMCODER_HOST: "0.0.0.0" }), "0.0.0.0");
+  assert.equal(getServerHost({ ACCODER_HOST: "0.0.0.0" }), "0.0.0.0");
 });
 
 test("deletes selected memory pages in batch", async () => {
-  const memoryFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-memory-")), "pages.jsonl");
+  const memoryFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "accoder-memory-")), "pages.jsonl");
   const currentMemoryFile = path.join(path.dirname(memoryFile), "current.json");
-  const server = createAcmcoderServer({ memoryFile, currentMemoryFile });
+  const server = createAccoderServer({ memoryFile, currentMemoryFile });
   const port = await listen(server);
 
   try {
@@ -207,9 +207,9 @@ test("deletes selected memory pages in batch", async () => {
 });
 
 test("exports latest memory pages as downloadable json", async () => {
-  const memoryFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-memory-")), "pages.jsonl");
+  const memoryFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "accoder-memory-")), "pages.jsonl");
   const currentMemoryFile = path.join(path.dirname(memoryFile), "current.json");
-  const server = createAcmcoderServer({ memoryFile, currentMemoryFile });
+  const server = createAccoderServer({ memoryFile, currentMemoryFile });
   const port = await listen(server);
 
   try {
@@ -222,7 +222,7 @@ test("exports latest memory pages as downloadable json", async () => {
 
     assert.equal(response.status, 200);
     assert.match(response.headers.get("content-disposition") || "", /attachment/);
-    assert.equal(body.format, "acmcoder-memory-v1");
+    assert.equal(body.format, "accoder-memory-v1");
     assert.equal(body.pages.length, 1);
     assert.equal(body.pages[0].slug, "alpha");
     assert.equal(body.pages[0].title, "newer alpha");
@@ -232,11 +232,11 @@ test("exports latest memory pages as downloadable json", async () => {
 });
 
 test("deletes selected visible problems including seed and memory entries", async () => {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-problems-"));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "accoder-problems-"));
   const memoryFile = path.join(tempDir, "pages.jsonl");
   const currentMemoryFile = path.join(tempDir, "current.json");
   const deletedProblemsFile = path.join(tempDir, "deleted-problems.json");
-  const server = createAcmcoderServer({ memoryFile, currentMemoryFile, deletedProblemsFile });
+  const server = createAccoderServer({ memoryFile, currentMemoryFile, deletedProblemsFile });
   const port = await listen(server);
 
   try {
@@ -267,11 +267,11 @@ test("deletes selected visible problems including seed and memory entries", asyn
 });
 
 test("exports selected seed and memory problems as downloadable json", async () => {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-problems-"));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "accoder-problems-"));
   const memoryFile = path.join(tempDir, "pages.jsonl");
   const currentMemoryFile = path.join(tempDir, "current.json");
   const deletedProblemsFile = path.join(tempDir, "deleted-problems.json");
-  const server = createAcmcoderServer({ memoryFile, currentMemoryFile, deletedProblemsFile });
+  const server = createAccoderServer({ memoryFile, currentMemoryFile, deletedProblemsFile });
   const port = await listen(server);
 
   try {
@@ -282,7 +282,7 @@ test("exports selected seed and memory problems as downloadable json", async () 
 
     assert.equal(response.status, 200);
     assert.match(response.headers.get("content-disposition") || "", /attachment/);
-    assert.equal(body.format, "acmcoder-problems-v1");
+    assert.equal(body.format, "accoder-problems-v1");
     assert.deepEqual(
       body.problems.map((problem) => problem.slug),
       ["reverse-linked-list", "memory:alpha"],
@@ -293,11 +293,11 @@ test("exports selected seed and memory problems as downloadable json", async () 
 });
 
 test("imports exported problems by restoring hidden seeds and saving memory entries", async () => {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-problems-"));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "accoder-problems-"));
   const memoryFile = path.join(tempDir, "pages.jsonl");
   const currentMemoryFile = path.join(tempDir, "current.json");
   const deletedProblemsFile = path.join(tempDir, "deleted-problems.json");
-  const server = createAcmcoderServer({ memoryFile, currentMemoryFile, deletedProblemsFile });
+  const server = createAccoderServer({ memoryFile, currentMemoryFile, deletedProblemsFile });
   const port = await listen(server);
 
   try {
@@ -311,7 +311,7 @@ test("imports exported problems by restoring hidden seeds and saving memory entr
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        format: "acmcoder-problems-v1",
+        format: "accoder-problems-v1",
         problems: [
           { source: "seed", slug: "reverse-linked-list" },
           {
@@ -350,11 +350,11 @@ test("imports exported problems by restoring hidden seeds and saving memory entr
 });
 
 test("imports legacy memory export json", async () => {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-problems-"));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "accoder-problems-"));
   const memoryFile = path.join(tempDir, "pages.jsonl");
   const currentMemoryFile = path.join(tempDir, "current.json");
   const deletedProblemsFile = path.join(tempDir, "deleted-problems.json");
-  const server = createAcmcoderServer({ memoryFile, currentMemoryFile, deletedProblemsFile });
+  const server = createAccoderServer({ memoryFile, currentMemoryFile, deletedProblemsFile });
   const port = await listen(server);
 
   try {
@@ -362,7 +362,7 @@ test("imports legacy memory export json", async () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        format: "acmcoder-memory-v1",
+        format: "accoder-memory-v1",
         pages: [memoryPage("legacy", { title: "legacy memory" })],
       }),
     });
@@ -377,13 +377,13 @@ test("imports legacy memory export json", async () => {
 });
 
 test("records accepted progress through run API and exposes it to problems and memory pages", async () => {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-progress-"));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "accoder-progress-"));
   const memoryFile = path.join(tempDir, "pages.jsonl");
   const currentMemoryFile = path.join(tempDir, "current.json");
   const deletedProblemsFile = path.join(tempDir, "deleted-problems.json");
   const progressFile = path.join(tempDir, "progress.json");
   const calls = [];
-  const server = createAcmcoderServer({
+  const server = createAccoderServer({
     memoryFile,
     currentMemoryFile,
     deletedProblemsFile,
@@ -451,8 +451,8 @@ test("records accepted progress through run API and exposes it to problems and m
 });
 
 test("exports and imports problem progress idempotently", async () => {
-  const sourceDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-progress-source-"));
-  const sourceServer = createAcmcoderServer({
+  const sourceDir = await fs.mkdtemp(path.join(os.tmpdir(), "accoder-progress-source-"));
+  const sourceServer = createAccoderServer({
     memoryFile: path.join(sourceDir, "pages.jsonl"),
     currentMemoryFile: path.join(sourceDir, "current.json"),
     deletedProblemsFile: path.join(sourceDir, "deleted-problems.json"),
@@ -465,8 +465,8 @@ test("exports and imports problem progress idempotently", async () => {
     }),
   });
   const sourcePort = await listen(sourceServer);
-  const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-progress-target-"));
-  const targetServer = createAcmcoderServer({
+  const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), "accoder-progress-target-"));
+  const targetServer = createAccoderServer({
     memoryFile: path.join(targetDir, "pages.jsonl"),
     currentMemoryFile: path.join(targetDir, "current.json"),
     deletedProblemsFile: path.join(targetDir, "deleted-problems.json"),
@@ -537,7 +537,7 @@ test("exports and imports problem progress idempotently", async () => {
 
 test("passes runner mode from run API into the runner layer", async () => {
   const calls = [];
-  const server = createAcmcoderServer({
+  const server = createAccoderServer({
     runSubmission: async (options) => {
       calls.push(options);
       return {
@@ -573,10 +573,10 @@ test("passes runner mode from run API into the runner layer", async () => {
 });
 
 test("stores assist settings and serves model advice through the local API", async () => {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-assist-server-"));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "accoder-assist-server-"));
   const assistSettingsFile = path.join(tempDir, "settings.json");
   const calls = [];
-  const server = createAcmcoderServer({
+  const server = createAccoderServer({
     assistSettingsFile,
     assistFetch: async (url, options) => {
       calls.push({ url, options });

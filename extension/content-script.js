@@ -1,8 +1,8 @@
-(function acmcoderContentScript() {
-  if (window.__ACMCODER_CONTENT_SCRIPT_READY__) {
+(function accoderContentScript() {
+  if (window.__ACCODER_CONTENT_SCRIPT_READY__) {
     return;
   }
-  window.__ACMCODER_CONTENT_SCRIPT_READY__ = true;
+  window.__ACCODER_CONTENT_SCRIPT_READY__ = true;
 
   const LEETCODE_CN_ORIGIN = "https://leetcode.cn";
   const QUESTION_QUERY = `query questionData($titleSlug: String!) {
@@ -201,7 +201,7 @@
 
   async function fetchQuestionDataViaBackground(slug) {
     const response = await sendRuntimeMessage({
-      type: "ACMCODER_FETCH_QUESTION_DATA",
+      type: "ACCODER_FETCH_QUESTION_DATA",
       slug,
       origin: location.origin,
     });
@@ -289,7 +289,7 @@
   }
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    if (message?.type !== "ACMCODER_CAPTURE") {
+    if (message?.type !== "ACCODER_CAPTURE") {
       return false;
     }
 

@@ -9,15 +9,15 @@ import { runProblemCases, runSubmission } from "../src/runner/run.js";
 import { startServer } from "../src/server/server.js";
 
 function printHelp() {
-  console.log(`ACMCoder
+  console.log(`ACCoder
 
 Usage:
-  node bin/acmcoder.js list
-  node bin/acmcoder.js show <slug-or-id>
-  node bin/acmcoder.js doctor
-  node bin/acmcoder.js test <slug> --lang <java|cpp|python> --file <path> [--runner <local|docker>]
-  node bin/acmcoder.js run <slug> --lang <java|cpp|python> --file <path> --input <path> [--expected <path>] [--runner <local|docker>]
-  node bin/acmcoder.js serve [--port 43117]
+  node bin/accoder.js list
+  node bin/accoder.js show <slug-or-id>
+  node bin/accoder.js doctor
+  node bin/accoder.js test <slug> --lang <java|cpp|python> --file <path> [--runner <local|docker>]
+  node bin/accoder.js run <slug> --lang <java|cpp|python> --file <path> --input <path> [--expected <path>] [--runner <local|docker>]
+  node bin/accoder.js serve [--port 43117]
 `);
 }
 

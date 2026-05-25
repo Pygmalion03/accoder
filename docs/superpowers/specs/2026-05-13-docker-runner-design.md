@@ -1,8 +1,8 @@
-# ACMCoder Docker Runner 设计方案
+# ACCoder Docker Runner 设计方案
 
 ## 背景
 
-当前 ACMCoder 的 runner 直接调用用户本机的 `javac`、`g++` 和 `python`。这对已经配置好开发环境的用户很轻量，但对没有本地工具链的用户不友好。v2 引入 Docker runner，让用户只要安装 Docker，就可以在统一容器环境中编译和运行 Java、C++、Python 提交。
+当前 ACCoder 的 runner 直接调用用户本机的 `javac`、`g++` 和 `python`。这对已经配置好开发环境的用户很轻量，但对没有本地工具链的用户不友好。v2 引入 Docker runner，让用户只要安装 Docker，就可以在统一容器环境中编译和运行 Java、C++、Python 提交。
 
 Docker runner 是一个显式运行模式，不替换现有本地 runner。默认仍然是 `local`，用户可以在 CLI 或 Web 中切换到 `docker`。
 
@@ -12,7 +12,7 @@ Docker runner 是一个显式运行模式，不替换现有本地 runner。默�
 - 增加 `local` / `docker` 两种运行模式。
 - CLI 支持 `--runner local|docker`。
 - Web 支持运行模式选择，并通过 `/api/run` 传递 `runner` 字段。
-- Docker 第一版使用项目内 Dockerfile，由用户本地构建 `acmcoder-runner:local` 镜像。
+- Docker 第一版使用项目内 Dockerfile，由用户本地构建 `accoder-runner:local` 镜像。
 - Docker 运行时加入基础资源和访问限制，避免用户代码过度占用宿主机。
 - Docker 不参与题目数据和判题规则，只影响编译运行环境。
 
@@ -67,8 +67,8 @@ LocalRunner 负责在宿主机执行命令。DockerRunner 负责把同样的 too
 CLI 新增可选参数：
 
 ```bash
-node bin/acmcoder.js test two-sum --lang cpp --file main.cpp --runner docker
-node bin/acmcoder.js run two-sum --lang python --file main.py --input input.txt --runner docker
+node bin/accoder.js test two-sum --lang cpp --file main.cpp --runner docker
+node bin/accoder.js run two-sum --lang python --file main.py --input input.txt --runner docker
 ```
 
 不传 `--runner` 时默认 `local`。
@@ -94,7 +94,7 @@ Web 增加一个运行模式控件，选项为 `Local` 和 `Docker`。控件只�
 第一版在仓库内提供 Dockerfile，用户本地构建：
 
 ```bash
-docker build -t acmcoder-runner:local .
+docker build -t accoder-runner:local .
 ```
 
 镜像至少包含：
@@ -104,7 +104,7 @@ docker build -t acmcoder-runner:local .
 - Python 3。
 - `bash` 或兼容 shell。
 
-Docker runner 默认使用镜像名 `acmcoder-runner:local`。后续可以通过配置项扩展镜像名，但 v2 先不做复杂配置。
+Docker runner 默认使用镜像名 `accoder-runner:local`。后续可以通过配置项扩展镜像名，但 v2 先不做复杂配置。
 
 ## Docker 运行限制
 
@@ -118,7 +118,7 @@ docker run --rm \
   --pids-limit 128 \
   -v <tempDir>:/workspace \
   -w /workspace \
-  acmcoder-runner:local \
+  accoder-runner:local \
   bash -lc "<compile-or-run-command>"
 ```
 
@@ -141,7 +141,7 @@ Docker 模式需要给出比普通 `failedToStart` 更明确的提示：
 
 - 找不到 `docker` 命令：返回运行器不可用，提示安装 Docker。
 - Docker daemon 未启动：返回运行器不可用，提示启动 Docker Desktop。
-- 镜像不存在：返回运行器不可用，提示执行 `docker build -t acmcoder-runner:local .`。
+- 镜像不存在：返回运行器不可用，提示执行 `docker build -t accoder-runner:local .`。
 - 编译失败：返回 `CE`。
 - 运行时异常：返回 `RE`。
 - 超时：返回 `TLE`。
@@ -167,7 +167,7 @@ Docker 模式需要给出比普通 `failedToStart` 更明确的提示：
 Docker runner 稳定后，增加 GitHub Container Registry 预构建镜像：
 
 ```text
-ghcr.io/pygmalion03/acmcoder-runner:v2
+ghcr.io/pygmalion03/accoder-runner:v2
 ```
 
 届时补 GitHub Actions 自动构建和发布镜像，用户可以直接 pull 镜像，不需要在本地执行 Dockerfile build。这个阶段只优化用户体验，不改变 runner 抽象和 CLI/API 参数。

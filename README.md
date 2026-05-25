@@ -1,4 +1,4 @@
-# ACMCoder
+# ACCoder
 
 基于 LeetCode 题目索引的本地 ACM 练习器。第一版先跑通本地真实执行闭环：题单、ACM 输入输出协议、固定样例、自定义输入、CLI 和本地 Web。
 
@@ -6,14 +6,14 @@
 
 先分清两个概念：
 
-- **启动方式**决定 ACMCoder Web 服务在哪里跑。
+- **启动方式**决定 ACCoder Web 服务在哪里跑。
 - **运行模式**决定你点 `Run` 时，代码交给哪套编译/运行环境。
 
 普通用户优先走 **Docker app**：Web 服务和 Java/C++/Python 工具链都在同一个 app 容器里。用户只需要 Docker Desktop，不需要另装 Node.js、Java、C++ 或 Python：
 
 ```bash
-git clone https://github.com/Pygmalion03/acmcoder.git
-cd acmcoder
+git clone https://github.com/Pygmalion03/accoder.git
+cd accoder
 docker compose -f docker-compose.prebuilt.yml up -d
 ```
 
@@ -52,10 +52,10 @@ docker compose -f docker-compose.prebuilt.yml up -d
 `docker-compose.prebuilt.yml` 默认使用预构建 `app:latest`。如果要锁定当前发布版本，可以使用对应的镜像 tag：
 
 ```text
-ghcr.io/pygmalion03/acmcoder-app:latest
-ghcr.io/pygmalion03/acmcoder-app:v2.2.0
-ghcr.io/pygmalion03/acmcoder-runner:latest
-ghcr.io/pygmalion03/acmcoder-runner:v2.2.0
+ghcr.io/pygmalion03/accoder-app:latest
+ghcr.io/pygmalion03/accoder-app:v2.2.0
+ghcr.io/pygmalion03/accoder-runner:latest
+ghcr.io/pygmalion03/accoder-runner:v2.2.0
 ```
 
 Release 的价值是让用户在 GitHub 页面上看到“这是哪个版本、改了什么、应该怎么启动”。没有 Release 也不影响 Docker 镜像运行，但有 Release 更适合公开项目使用。
@@ -84,15 +84,15 @@ Release 的价值是让用户在 GitHub 页面上看到“这是哪个版本、�
 ```bash
 npm install
 npm test
-node bin/acmcoder.js list
-node bin/acmcoder.js show reverse-linked-list
-node bin/acmcoder.js doctor
+node bin/accoder.js list
+node bin/accoder.js show reverse-linked-list
+node bin/accoder.js doctor
 ```
 
 测试你自己的 Python 文件：
 
 ```bash
-node bin/acmcoder.js test reverse-linked-list --lang python --file path/to/your/main.py
+node bin/accoder.js test reverse-linked-list --lang python --file path/to/your/main.py
 ```
 
 启动本地 Web：
@@ -111,33 +111,33 @@ http://127.0.0.1:43117
 
 ## Docker runner
 
-如果本机能启动 ACMCoder Web，但没有 Java、C++ 或 Python 工具链，可以选择 Docker runner。runner 镜像带了 Java、C++、Python 三套运行环境；页面和 CLI 仍然按每次运行选择的语言执行对应模板。
+如果本机能启动 ACCoder Web，但没有 Java、C++ 或 Python 工具链，可以选择 Docker runner。runner 镜像带了 Java、C++、Python 三套运行环境；页面和 CLI 仍然按每次运行选择的语言执行对应模板。
 
-默认镜像名是 `acmcoder-runner:local`。首次 Docker 运行会自动检查它；如果镜像不存在，会自动在项目根目录执行等价的构建命令：
+默认镜像名是 `accoder-runner:local`。首次 Docker 运行会自动检查它；如果镜像不存在，会自动在项目根目录执行等价的构建命令：
 
 ```bash
-docker build -t acmcoder-runner:local .
+docker build -t accoder-runner:local .
 ```
 
 如果你想提前构建，也可以手动运行上面的命令。发布后的预构建 runner 镜像可以这样指定：
 
 ```powershell
-$env:ACMCODER_DOCKER_IMAGE="ghcr.io/pygmalion03/acmcoder-runner:latest"
+$env:ACCODER_DOCKER_IMAGE="ghcr.io/pygmalion03/accoder-runner:latest"
 ```
 
 ```bash
-export ACMCODER_DOCKER_IMAGE=ghcr.io/pygmalion03/acmcoder-runner:latest
+export ACCODER_DOCKER_IMAGE=ghcr.io/pygmalion03/accoder-runner:latest
 ```
 
 然后在 CLI 中显式选择 Docker：
 
 ```bash
-node bin/acmcoder.js test reverse-linked-list --lang python --file path/to/your/main.py --runner docker
+node bin/accoder.js test reverse-linked-list --lang python --file path/to/your/main.py --runner docker
 ```
 
-如果不想让 ACMCoder 自动构建镜像，可以设置 `ACMCODER_DOCKER_AUTO_BUILD=0`。这时缺镜像会直接返回 `NO_RUNNER` 并提示手动构建命令。
+如果不想让 ACCoder 自动构建镜像，可以设置 `ACCODER_DOCKER_AUTO_BUILD=0`。这时缺镜像会直接返回 `NO_RUNNER` 并提示手动构建命令。
 
-`node bin/acmcoder.js doctor` 会同时展示本地 Java/C++/Python 工具链和 Docker runner 状态，包括 Docker daemon 是否可用、配置的镜像是否已经存在或是否会在首次运行时自动构建。
+`node bin/accoder.js doctor` 会同时展示本地 Java/C++/Python 工具链和 Docker runner 状态，包括 Docker daemon 是否可用、配置的镜像是否已经存在或是否会在首次运行时自动构建。
 
 源码模式下 Web 页面也可以在运行模式里选择 Docker。Docker 模式会禁用容器网络，并限制 CPU、内存和进程数量。
 
@@ -187,19 +187,19 @@ docs/deployment.md
 
 Web 页面和 Edge 侧边栏会调用 `/api/doctor` 显示 Python、Java、C++ 与 Docker runner 状态。源码模式下，如果用户还没有手动选择运行模式，页面会按当前语言给出推荐；Docker app 模式下页面会明确显示 `内置环境` 并禁用 Docker runner。
 
-模型建议是可选能力，不参与判题，也不会覆盖源代码。用户可以在页面里填写 API Key、Base URL 和 Model，服务端会通过 OpenAI-compatible `chat/completions` 接口请求建议。设置保存在 `data/memory/settings.json`，也可以通过 `ACMCODER_LLM_API_KEY`、`ACMCODER_LLM_BASE_URL`、`ACMCODER_LLM_MODEL` 配置。
+模型建议是可选能力，不参与判题，也不会覆盖源代码。用户可以在页面里填写 API Key、Base URL 和 Model，服务端会通过 OpenAI-compatible `chat/completions` 接口请求建议。设置保存在 `data/memory/settings.json`，也可以通过 `ACCODER_LLM_API_KEY`、`ACCODER_LLM_BASE_URL`、`ACCODER_LLM_MODEL` 配置。
 
 `data/memory/` 已被 git 忽略，API Key 不会随源码提交。注意它目前是本机明文保存，适合个人本地使用，不要把自己的 `data/memory` 目录分享给别人。
 
 ## CLI
 
 ```bash
-node bin/acmcoder.js list
-node bin/acmcoder.js show <slug-or-id>
-node bin/acmcoder.js doctor
-node bin/acmcoder.js test <slug> --lang <java|cpp|python> --file <path> [--runner <local|docker>]
-node bin/acmcoder.js run <slug> --lang <java|cpp|python> --file <path> --input <path> [--expected <path>] [--runner <local|docker>]
-node bin/acmcoder.js serve [--port 43117]
+node bin/accoder.js list
+node bin/accoder.js show <slug-or-id>
+node bin/accoder.js doctor
+node bin/accoder.js test <slug> --lang <java|cpp|python> --file <path> [--runner <local|docker>]
+node bin/accoder.js run <slug> --lang <java|cpp|python> --file <path> --input <path> [--expected <path>] [--runner <local|docker>]
+node bin/accoder.js serve [--port 43117]
 ```
 
 ## 目录
@@ -232,7 +232,7 @@ GET  http://127.0.0.1:43117/api/problems/export
 POST http://127.0.0.1:43117/api/problems/import
 ```
 
-Web 页面会把插件保存的记忆题目和内置种子题目统一显示在题目列表里。点击 `选择题目` 后才会显示复选框；`删除选中` 对记忆题目会改写 `data/memory/pages.jsonl`，对内置种子题会写入本地隐藏记录 `data/memory/deleted-problems.json`，不会删除仓库源码里的种子数据。`导出全部` 会下载 JSON；选择题目后会变成导出选中题目。`导入` 支持导入 `acmcoder-problems-v1` 和旧的 `acmcoder-memory-v1` JSON：记忆题会写回本地记忆文件，内置种子题会解除本地隐藏状态。
+Web 页面会把插件保存的记忆题目和内置种子题目统一显示在题目列表里。点击 `选择题目` 后才会显示复选框；`删除选中` 对记忆题目会改写 `data/memory/pages.jsonl`，对内置种子题会写入本地隐藏记录 `data/memory/deleted-problems.json`，不会删除仓库源码里的种子数据。`导出全部` 会下载 JSON；选择题目后会变成导出选中题目。`导入` 支持导入 `accoder-problems-v1` 和旧的 `accoder-memory-v1` JSON：记忆题会写回本地记忆文件，内置种子题会解除本地隐藏状态。
 
 设计说明见：
 

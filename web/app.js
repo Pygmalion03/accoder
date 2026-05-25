@@ -9,9 +9,9 @@ const state = {
 };
 
 const CACHE_KEYS = {
-  selected: "acmcoder.web.selected",
-  language: "acmcoder.web.language",
-  runner: "acmcoder.web.runner",
+  selected: "accoder.web.selected",
+  language: "accoder.web.language",
+  runner: "accoder.web.runner",
 };
 
 const GENERIC_TEMPLATES = {
@@ -364,7 +364,7 @@ async function askAssist() {
 }
 
 function problemCacheKey(problem = state.selected) {
-  return problem ? `acmcoder.web.problem.${problem.slug}.${elements.language.value}` : "";
+  return problem ? `accoder.web.problem.${problem.slug}.${elements.language.value}` : "";
 }
 
 function saveWorkspaceCache() {
@@ -866,7 +866,7 @@ async function runCode() {
 
 function cleanupProblemWorkspaceCache(slug) {
   for (const language of ["python", "java", "cpp"]) {
-    localStorage.removeItem(`acmcoder.web.problem.${slug}.${language}`);
+    localStorage.removeItem(`accoder.web.problem.${slug}.${language}`);
   }
 }
 
@@ -987,7 +987,7 @@ async function exportProblems() {
 
   const query = slugs.length > 0 ? `?slugs=${encodeURIComponent(slugs.join(","))}` : "";
   const body = await getJson(`/api/problems/export${query}`);
-  downloadJson(`acmcoder-problems-${new Date().toISOString().slice(0, 10)}.json`, body);
+  downloadJson(`accoder-problems-${new Date().toISOString().slice(0, 10)}.json`, body);
 }
 
 async function loadCurrentMemory({ autoSelect = false } = {}) {

@@ -27,7 +27,7 @@ async function prepareSource({ toolchain, file, code, workdir }) {
 export async function runSubmission(options) {
   const toolchain = getToolchain(options.language);
   const runner = getRunner(options.runner);
-  const workdir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-"));
+  const workdir = await fs.mkdtemp(path.join(os.tmpdir(), "accoder-"));
 
   try {
     const sourceFile = await prepareSource({

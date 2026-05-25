@@ -26,7 +26,7 @@ async function safeCheckToolchain(language, checkToolchain) {
 }
 
 function buildDeploymentReport(env = process.env) {
-  const mode = env?.ACMCODER_DEPLOYMENT_MODE === "docker-app" ? "docker-app" : "host";
+  const mode = env?.ACCODER_DEPLOYMENT_MODE === "docker-app" ? "docker-app" : "host";
   return {
     mode,
     localRunnerLabel: mode === "docker-app" ? "内置环境" : "本机环境",
