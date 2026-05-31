@@ -80,6 +80,26 @@ test("web editor renders line numbers next to code", () => {
   assert.match(script, /syncLineNumbers/);
 });
 
+test("web editor highlights the matching bracket and grows without horizontal dragging", () => {
+  const html = fs.readFileSync("web/index.html", "utf8");
+  const css = fs.readFileSync("web/styles.css", "utf8");
+  const script = fs.readFileSync("web/app.js", "utf8");
+
+  assert.match(html, /<textarea id="code"[^>]*wrap="soft"/);
+  assert.doesNotMatch(html, /<textarea id="code"[^>]*wrap="off"/);
+  assert.match(css, /\.bracket-match/);
+  assert.match(css, /white-space:\s*pre-wrap/);
+  assert.match(css, /overflow-wrap:\s*anywhere/);
+  assert.match(css, /overflow-x:\s*hidden/);
+  assert.match(css, /\.code-editor\s*\{[\s\S]*resize:\s*none/);
+  assert.match(script, /codeEditor:\s*document\.querySelector\("#code-editor"\)/);
+  assert.match(script, /findMatchingBracket/);
+  assert.match(script, /getBracketMatch/);
+  assert.match(script, /autoSizeCodeEditor/);
+  assert.match(script, /addEventListener\("select", syncHighlight\)/);
+  assert.match(script, /addEventListener\("keyup", syncHighlight\)/);
+});
+
 test("web UI exposes local and docker runner modes", () => {
   const html = fs.readFileSync("web/index.html", "utf8");
   const script = fs.readFileSync("web/app.js", "utf8");
@@ -90,7 +110,7 @@ test("web UI exposes local and docker runner modes", () => {
   assert.match(html, /value="docker"/);
   assert.match(script, /runner:\s*document\.querySelector\("#runner"\)/);
   assert.match(script, /runner:\s*elements\.runner\.value/);
-  assert.match(script, /accoder\.web\.runner/);
+  assert.match(script, /acmcoder\.web\.runner/);
   assert.match(css, /\.status\.NO_RUNNER/);
 });
 
@@ -171,7 +191,7 @@ test("web UI records accepted counts and highlights them", () => {
   const script = fs.readFileSync("web/app.js", "utf8");
   const css = fs.readFileSync("web/styles.css", "utf8");
 
-  assert.doesNotMatch(script, /accoder\.web\.acCounts/);
+  assert.doesNotMatch(script, /acmcoder\.web\.acCounts/);
   assert.doesNotMatch(script, /localStorage\.getItem\(CACHE_KEYS\.acCounts/);
   assert.match(script, /body\.result\.status === "AC"/);
   assert.match(script, /body\.progress/);

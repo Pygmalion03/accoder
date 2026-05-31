@@ -1,13 +1,13 @@
 services:
-  accoder:
+  acmcoder:
     build:
       context: .
       dockerfile: Dockerfile.app
-    image: accoder-app:local
+    image: acmcoder-app:local
     ports:
       - "43117:43117"
     volumes:
       - ./data/memory:/app/data/memory
     environment:
       PORT: "43117"
-      ACCODER_HOST: "0.0.0.0"
+      ACMCODER_HOST: "0.0.0.0"

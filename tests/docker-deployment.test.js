@@ -9,9 +9,9 @@ test("repository includes a Docker app image for zero-local-toolchain users", ()
   assert.match(dockerfile, /g\+\+/);
   assert.match(dockerfile, /openjdk/i);
   assert.match(dockerfile, /python3/);
-  assert.match(dockerfile, /ACCODER_HOST=0\.0\.0\.0/);
-  assert.match(dockerfile, /ACCODER_DEPLOYMENT_MODE=docker-app/);
-  assert.match(dockerfile, /bin\/accoder\.js/);
+  assert.match(dockerfile, /ACMCODER_HOST=0\.0\.0\.0/);
+  assert.match(dockerfile, /ACMCODER_DEPLOYMENT_MODE=docker-app/);
+  assert.match(dockerfile, /bin\/acmcoder\.js/);
 });
 
 test("docker compose exposes the web server and persists local memory", () => {
@@ -37,7 +37,7 @@ test("repository publishes prebuilt full-language app and runner images through 
 test("prebuilt compose pulls the full-language app image without local build", () => {
   const compose = fs.readFileSync("docker-compose.prebuilt.yml", "utf8");
 
-  assert.match(compose, /ghcr\.io\/pygmalion03\/accoder-app:latest/);
+  assert.match(compose, /ghcr\.io\/pygmalion03\/acmcoder-app:latest/);
   assert.match(compose, /43117:43117/);
   assert.match(compose, /\.\/data\/memory:\/app\/data\/memory/);
   assert.doesNotMatch(compose, /\bbuild:/);

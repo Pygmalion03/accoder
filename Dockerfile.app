@@ -20,10 +20,10 @@ RUN npm install --omit=dev --ignore-scripts
 
 COPY . .
 
-ENV ACCODER_HOST=0.0.0.0
-ENV ACCODER_DEPLOYMENT_MODE=docker-app
+ENV ACMCODER_HOST=0.0.0.0
+ENV ACMCODER_DEPLOYMENT_MODE=docker-app
 ENV PORT=43117
 
 EXPOSE 43117
 
-CMD ["node", "bin/accoder.js", "serve", "--port", "43117"]
+CMD ["node", "bin/acmcoder.js", "serve", "--port", "43117"]

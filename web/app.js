@@ -9,9 +9,9 @@ const state = {
 };
 
 const CACHE_KEYS = {
-  selected: "accoder.web.selected",
-  language: "accoder.web.language",
-  runner: "accoder.web.runner",
+  selected: "acmcoder.web.selected",
+  language: "acmcoder.web.language",
+  runner: "acmcoder.web.runner",
 };
 
 const GENERIC_TEMPLATES = {
@@ -69,6 +69,7 @@ const elements = {
   runnerHealth: document.querySelector("#runner-health"),
   loadTemplate: document.querySelector("#load-template"),
   run: document.querySelector("#run"),
+  codeEditor: document.querySelector("#code-editor"),
   lineNumbers: document.querySelector("#line-numbers"),
   code: document.querySelector("#code"),
   highlight: document.querySelector("#code-highlight code"),
@@ -185,6 +186,14 @@ const types = new Set([
   "std",
   "sys",
 ]);
+
+const BRACKET_PAIRS = {
+  "(": ")",
+  "[": "]",
+  "{": "}",
+};
+
+const CLOSING_BRACKETS = Object.fromEntries(Object.entries(BRACKET_PAIRS).map(([open, close]) => [close, open]));
 
 async function getJson(url, options) {
   const response = await fetch(url, options);
@@ -364,7 +373,7 @@ async function askAssist() {
 }
 
 function problemCacheKey(problem = state.selected) {
-  return problem ? `accoder.web.problem.${problem.slug}.${elements.language.value}` : "";
+  return problem ? `acmcoder.web.problem.${problem.slug}.${elements.language.value}` : "";
 }
 
 function saveWorkspaceCache() {
@@ -417,7 +426,37 @@ function classifyToken(token, language) {
   return "";
 }
 
-function highlightCode(code, language) {
+function wrapHighlightedSegment(text, className, startIndex, bracketMatch) {
+  if (!text) {
+    return "";
+  }
+
+  let result = "";
+  let cursor = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    if (!bracketMatch.has(startIndex + index)) {
+      continue;
+    }
+
+    if (index > cursor) {
+      const chunk = escapeHtml(text.slice(cursor, index));
+      result += className ? `<span class="${className}">${chunk}</span>` : chunk;
+    }
+
+    const classes = [className, "bracket-match"].filter(Boolean).join(" ");
+    result += `<span class="${classes}">${escapeHtml(text[index])}</span>`;
+    cursor = index + 1;
+  }
+
+  if (cursor < text.length) {
+    const chunk = escapeHtml(text.slice(cursor));
+    result += className ? `<span class="${className}">${chunk}</span>` : chunk;
+  }
+
+  return result;
+}
+
+function highlightCode(code, language, bracketMatch = new Set()) {
   const wordPattern = keywords[language]?.join("|") || "";
   const common = wordPattern ? `${wordPattern}|${[...types].join("|")}` : [...types].join("|");
   const expression =
@@ -431,19 +470,78 @@ function highlightCode(code, language) {
     const token = match[0];
     const index = match.index;
     const className = classifyToken(token, language);
-    result += escapeHtml(code.slice(cursor, index));
-    result += className ? `<span class="${className}">${escapeHtml(token)}</span>` : escapeHtml(token);
+    result += wrapHighlightedSegment(code.slice(cursor, index), "", cursor, bracketMatch);
+    result += wrapHighlightedSegment(token, className, index, bracketMatch);
     cursor = index + token.length;
   }
-  result += escapeHtml(code.slice(cursor));
+  result += wrapHighlightedSegment(code.slice(cursor), "", cursor, bracketMatch);
   return result || "\n";
 }
 
+function findSelectedBracketIndex(value, selectionStart, selectionEnd) {
+  if (selectionEnd - selectionStart === 1 && (BRACKET_PAIRS[value[selectionStart]] || CLOSING_BRACKETS[value[selectionStart]])) {
+    return selectionStart;
+  }
+
+  if (selectionStart !== selectionEnd) {
+    return -1;
+  }
+
+  if (BRACKET_PAIRS[value[selectionStart]] || CLOSING_BRACKETS[value[selectionStart]]) {
+    return selectionStart;
+  }
+
+  const previous = selectionStart - 1;
+  if (previous >= 0 && (BRACKET_PAIRS[value[previous]] || CLOSING_BRACKETS[value[previous]])) {
+    return previous;
+  }
+
+  return -1;
+}
+
+function findMatchingBracket(value, bracketIndex) {
+  const bracket = value[bracketIndex];
+  const closing = BRACKET_PAIRS[bracket];
+  const opening = CLOSING_BRACKETS[bracket];
+
+  if (closing) {
+    let depth = 0;
+    for (let index = bracketIndex; index < value.length; index += 1) {
+      if (value[index] === bracket) depth += 1;
+      if (value[index] === closing) depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+
+  if (opening) {
+    let depth = 0;
+    for (let index = bracketIndex; index >= 0; index -= 1) {
+      if (value[index] === bracket) depth += 1;
+      if (value[index] === opening) depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+
+  return -1;
+}
+
+function getBracketMatch(value, selectionStart, selectionEnd) {
+  const bracketIndex = findSelectedBracketIndex(value, selectionStart, selectionEnd);
+  if (bracketIndex < 0) {
+    return new Set();
+  }
+
+  const matchingIndex = findMatchingBracket(value, bracketIndex);
+  return new Set(matchingIndex >= 0 ? [bracketIndex, matchingIndex] : [bracketIndex]);
+}
+
 function syncHighlight() {
-  elements.highlight.innerHTML = highlightCode(elements.code.value, elements.language.value);
+  const bracketMatch = getBracketMatch(elements.code.value, elements.code.selectionStart, elements.code.selectionEnd);
+  elements.highlight.innerHTML = highlightCode(elements.code.value, elements.language.value, bracketMatch);
   elements.highlight.parentElement.scrollTop = elements.code.scrollTop;
   elements.highlight.parentElement.scrollLeft = elements.code.scrollLeft;
   syncLineNumbers();
+  autoSizeCodeEditor();
 }
 
 function syncLineNumbers() {
@@ -453,6 +551,14 @@ function syncLineNumbers() {
     elements.lineNumbers.textContent = nextValue;
   }
   elements.lineNumbers.scrollTop = elements.code.scrollTop;
+}
+
+function autoSizeCodeEditor() {
+  const minHeight = Number.parseFloat(getComputedStyle(elements.codeEditor).minHeight) || 260;
+  elements.code.style.height = "auto";
+  const nextHeight = Math.max(minHeight, elements.code.scrollHeight);
+  elements.codeEditor.style.height = `${nextHeight}px`;
+  elements.code.style.height = "100%";
 }
 
 function replaceSelection(nextText, selectionOffset = nextText.length) {
@@ -866,7 +972,7 @@ async function runCode() {
 
 function cleanupProblemWorkspaceCache(slug) {
   for (const language of ["python", "java", "cpp"]) {
-    localStorage.removeItem(`accoder.web.problem.${slug}.${language}`);
+    localStorage.removeItem(`acmcoder.web.problem.${slug}.${language}`);
   }
 }
 
@@ -987,7 +1093,7 @@ async function exportProblems() {
 
   const query = slugs.length > 0 ? `?slugs=${encodeURIComponent(slugs.join(","))}` : "";
   const body = await getJson(`/api/problems/export${query}`);
-  downloadJson(`accoder-problems-${new Date().toISOString().slice(0, 10)}.json`, body);
+  downloadJson(`acmcoder-problems-${new Date().toISOString().slice(0, 10)}.json`, body);
 }
 
 async function loadCurrentMemory({ autoSelect = false } = {}) {
@@ -1079,6 +1185,9 @@ async function init() {
     saveWorkspaceCache();
   });
   elements.code.addEventListener("scroll", syncHighlight);
+  elements.code.addEventListener("select", syncHighlight);
+  elements.code.addEventListener("click", syncHighlight);
+  elements.code.addEventListener("keyup", syncHighlight);
   elements.code.addEventListener("beforeinput", handleEditorBeforeInput);
   elements.code.addEventListener("keydown", handleEditorKeydown);
   elements.stdin.addEventListener("input", saveWorkspaceCache);

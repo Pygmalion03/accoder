@@ -1,8 +1,8 @@
-# ACCoder 部署现状
+# ACMCoder 部署现状
 
 ## 先分清入口和运行模式
 
-ACCoder 现在有两个 Web 启动入口：
+ACMCoder 现在有两个 Web 启动入口：
 
 - 宿主机源码启动：Node 服务在本机跑。
 - Docker app 启动：Node 服务和 Java/C++/Python 工具链都在 app 容器里。
@@ -56,16 +56,16 @@ docker compose up --build
 
 ## 两类 Docker 镜像的区别
 
-`Dockerfile` 是 runner 镜像。它服务于“本机启动 Web，然后运行代码时选择 Docker runner”的场景。默认镜像名是 `accoder-runner:local`，缺失时会自动构建。发布后的预构建镜像名是：
+`Dockerfile` 是 runner 镜像。它服务于“本机启动 Web，然后运行代码时选择 Docker runner”的场景。默认镜像名是 `acmcoder-runner:local`，缺失时会自动构建。发布后的预构建镜像名是：
 
 ```text
-ghcr.io/pygmalion03/accoder-runner:latest
+ghcr.io/pygmalion03/acmcoder-runner:latest
 ```
 
-`Dockerfile.app` 是应用镜像。它服务于“用户只有 Docker，也想直接打开 ACCoder Web”的场景。它把 Node 服务和 Java/C++/Python 工具链都放在一个容器里，因此不需要在容器里再调用 Docker runner。发布后的预构建镜像名是：
+`Dockerfile.app` 是应用镜像。它服务于“用户只有 Docker，也想直接打开 ACMCoder Web”的场景。它把 Node 服务和 Java/C++/Python 工具链都放在一个容器里，因此不需要在容器里再调用 Docker runner。发布后的预构建镜像名是：
 
 ```text
-ghcr.io/pygmalion03/accoder-app:latest
+ghcr.io/pygmalion03/acmcoder-app:latest
 ```
 
 这两个镜像都先做全量三语言。语言选择发生在页面或 CLI 的每次运行里，不发生在 Docker 部署阶段。部署时拆成 Java-only、C++-only、Python-only 镜像是可行的，但会增加镜像矩阵、文档分支和用户选择成本；在当前目标里，先保证“装了 Docker 就能直接用”更划算。
@@ -83,19 +83,19 @@ Docker app 模式下页面会禁用 `Docker runner`。如果用户已经通过 D
 本地 Web 想直接使用预构建 runner 时，可以设置：
 
 ```powershell
-$env:ACCODER_DOCKER_IMAGE="ghcr.io/pygmalion03/accoder-runner:latest"
+$env:ACMCODER_DOCKER_IMAGE="ghcr.io/pygmalion03/acmcoder-runner:latest"
 ```
 
 ```bash
-export ACCODER_DOCKER_IMAGE=ghcr.io/pygmalion03/accoder-runner:latest
+export ACMCODER_DOCKER_IMAGE=ghcr.io/pygmalion03/acmcoder-runner:latest
 ```
 
 ## 镜像发布
 
 `.github/workflows/publish-images.yml` 会发布两类多架构镜像：
 
-- `accoder-app`
-- `accoder-runner`
+- `acmcoder-app`
+- `acmcoder-runner`
 
 它支持手动触发，也会在推送 `v*` tag 时发布带版本 tag 的镜像，并给版本发布产物补 `latest`。`docker-compose.prebuilt.yml` 指向预构建 `app` 镜像，避免零环境用户先在本地 build。
 
@@ -104,13 +104,13 @@ export ACCODER_DOCKER_IMAGE=ghcr.io/pygmalion03/accoder-runner:latest
 Release 不是 Docker 运行的必要条件。Docker 用户真正拉取的是 GHCR package：
 
 ```text
-ghcr.io/pygmalion03/accoder-app:latest
-ghcr.io/pygmalion03/accoder-runner:latest
+ghcr.io/pygmalion03/acmcoder-app:latest
+ghcr.io/pygmalion03/acmcoder-runner:latest
 ```
 
 Release 的作用是给用户一个清晰的版本页，说明这个版本对应哪个 tag、有哪些镜像、怎么启动。源码 ZIP/TAR 也会挂在 Release 下面，但普通 Docker 用户仍然建议使用仓库里的 `docker-compose.prebuilt.yml` 或最新源码目录，而不是把 Release 当成安装器。
 
-源码分支可以先于正式 Release 更新。默认 Compose 文件使用 `ghcr.io/pygmalion03/accoder-app:latest`；如果需要固定版本，再使用 Release 对应的 tag，例如 `ghcr.io/pygmalion03/accoder-app:v2.2.0`。
+源码分支可以先于正式 Release 更新。默认 Compose 文件使用 `ghcr.io/pygmalion03/acmcoder-app:latest`；如果需要固定版本，再使用 Release 对应的 tag，例如 `ghcr.io/pygmalion03/acmcoder-app:v2.2.0`。
 
 ## 环境扫描
 
@@ -137,9 +137,9 @@ POST /api/assist
 默认按 OpenAI-compatible `chat/completions` 接口调用。用户可以在 Web 或插件里填写 API Key、Base URL 和 Model。设置保存到 `data/memory/settings.json`，这个目录已被 git 忽略。也可以用环境变量：
 
 ```text
-ACCODER_LLM_API_KEY
-ACCODER_LLM_BASE_URL
-ACCODER_LLM_MODEL
+ACMCODER_LLM_API_KEY
+ACMCODER_LLM_BASE_URL
+ACMCODER_LLM_MODEL
 ```
 
 ## 仍然不够顺的地方

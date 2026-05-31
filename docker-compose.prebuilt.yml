@@ -1,10 +1,10 @@
 services:
-  accoder:
-    image: ghcr.io/pygmalion03/accoder-app:latest
+  acmcoder:
+    image: ghcr.io/pygmalion03/acmcoder-app:latest
     ports:
       - "43117:43117"
     volumes:
       - ./data/memory:/app/data/memory
     environment:
       PORT: "43117"
-      ACCODER_HOST: "0.0.0.0"
+      ACMCODER_HOST: "0.0.0.0"

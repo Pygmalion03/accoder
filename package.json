@@ -1,16 +1,16 @@
 {
-  "name": "accoder",
+  "name": "acmcoder",
   "version": "0.1.0",
   "private": true,
   "description": "Local-first LeetCode-based ACM practice runner",
   "type": "module",
   "bin": {
-    "accoder": "./bin/accoder.js"
+    "acmcoder": "./bin/acmcoder.js"
   },
   "scripts": {
     "test": "node --test",
     "start": "node src/server/server.js",
-    "cli": "node bin/accoder.js"
+    "cli": "node bin/acmcoder.js"
   },
   "engines": {
     "node": ">=20"

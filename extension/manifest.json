@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "ACCoder",
+  "name": "ACMCoder",
   "version": "0.1.0",
-  "description": "Capture LeetCode problem text into the local ACCoder memory store.",
+  "description": "Capture LeetCode problem text into the local ACMCoder memory store.",
   "permissions": ["activeTab", "scripting", "sidePanel", "storage", "tabs"],
   "host_permissions": [
     "https://leetcode.cn/*",
@@ -13,7 +13,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "ACCoder"
+    "default_title": "ACMCoder"
   },
   "side_panel": {
     "default_path": "sidebar.html"

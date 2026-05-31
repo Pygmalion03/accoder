@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Publish full Java/C++/Python ACCoder app and runner images from GitHub Actions and give Docker-only users a pull-first startup path.
+**Goal:** Publish full Java/C++/Python ACMCoder app and runner images from GitHub Actions and give Docker-only users a pull-first startup path.
 
 **Architecture:** Keep the existing full-language `Dockerfile.app` and `Dockerfile` split. A GitHub Actions matrix builds both Dockerfiles for GHCR as multi-platform images, while a prebuilt Compose file pulls the app image and the docs explain when to use the app image versus the runner image.
 
@@ -59,8 +59,8 @@ The workflow logs in to `ghcr.io` with `secrets.GITHUB_TOKEN`, publishes `linux/
 
 ```yaml
 services:
-  accoder:
-    image: ghcr.io/pygmalion03/accoder-app:latest
+  acmcoder:
+    image: ghcr.io/pygmalion03/acmcoder-app:latest
     ports:
       - "43117:43117"
     volumes:
@@ -81,7 +81,7 @@ Expected: PASS.
 
 - [x] **Step 1: Explain app versus runner**
 
-Document that the app image runs the whole ACCoder Web service with all three language toolchains, while the runner image is for a locally started ACCoder server that executes submissions through Docker.
+Document that the app image runs the whole ACMCoder Web service with all three language toolchains, while the runner image is for a locally started ACMCoder server that executes submissions through Docker.
 
 - [x] **Step 2: Document pull-first commands**
 
@@ -94,7 +94,7 @@ docker compose -f docker-compose.prebuilt.yml up -d
 and the runner override:
 
 ```powershell
-$env:ACCODER_DOCKER_IMAGE="ghcr.io/pygmalion03/accoder-runner:latest"
+$env:ACMCODER_DOCKER_IMAGE="ghcr.io/pygmalion03/acmcoder-runner:latest"
 ```
 
 - [x] **Step 3: Run the full verification**

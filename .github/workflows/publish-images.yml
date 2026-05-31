@@ -50,7 +50,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/accoder-${{ matrix.name }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/acmcoder-${{ matrix.name }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag

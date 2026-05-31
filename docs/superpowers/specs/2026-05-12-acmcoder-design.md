@@ -1,8 +1,8 @@
-# ACCoder 设计方案
+# ACMCoder 设计方案
 
 ## 产品定位
 
-ACCoder 是一个基于 LeetCode 题目索引的开源本地 ACM 训练项目。它不做 LeetCode 替代品，也不在仓库中分发完整 LeetCode 题面；第一版只维护题目索引、LeetCode 链接、ACM 输入输出协议、样例和语言模板。
+ACMCoder 是一个基于 LeetCode 题目索引的开源本地 ACM 训练项目。它不做 LeetCode 替代品，也不在仓库中分发完整 LeetCode 题面；第一版只维护题目索引、LeetCode 链接、ACM 输入输出协议、样例和语言模板。
 
 核心价值是把常见的 LeetCode 函数式题目转换成可以用标准输入输出练习的 ACM 模式，让用户在本地完成真实编译、运行和输出比对。
 

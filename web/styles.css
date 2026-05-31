@@ -363,7 +363,7 @@ textarea {
   border: 1px solid #252b33;
   border-radius: 6px;
   background: var(--code);
-  resize: vertical;
+  resize: none;
 }
 
 .code-scroll {
@@ -371,6 +371,7 @@ textarea {
   min-width: 0;
   height: 100%;
   min-height: 0;
+  overflow: hidden;
 }
 
 #code,
@@ -385,7 +386,8 @@ textarea {
   line-height: 1.55;
   letter-spacing: 0;
   tab-size: 4;
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .line-numbers {
@@ -400,26 +402,41 @@ textarea {
 }
 
 #code-highlight {
-  display: none;
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  color: #d8dee9;
+  pointer-events: none;
 }
 
 #code-highlight code {
   display: block;
-  min-width: max-content;
+  min-width: 0;
+  padding: 14px;
 }
 
 #code {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 100%;
   min-width: 100%;
   padding: 14px;
   resize: none;
-  overflow: auto;
+  overflow: hidden;
+  overflow-x: hidden;
   background: transparent;
   color: #d8dee9;
   caret-color: #f8fafc;
   outline: none;
   appearance: none;
+}
+
+.bracket-match {
+  border-radius: 3px;
+  background: rgba(255, 214, 102, 0.42);
+  color: #f8fafc;
 }
 
 #code::selection {

@@ -1,9 +1,9 @@
 const LOCAL_BASE = "http://127.0.0.1:43117";
 const STORAGE_KEYS = {
-  memoryMode: "accoder.memoryMode",
-  lastPage: "accoder.lastPage",
-  language: "accoder.sidebar.language",
-  runner: "accoder.sidebar.runner",
+  memoryMode: "acmcoder.memoryMode",
+  lastPage: "acmcoder.lastPage",
+  language: "acmcoder.sidebar.language",
+  runner: "acmcoder.sidebar.runner",
 };
 
 const GENERIC_TEMPLATES = {
@@ -141,6 +141,14 @@ const types = new Set([
   "sys",
 ]);
 
+const BRACKET_PAIRS = {
+  "(": ")",
+  "[": "]",
+  "{": "}",
+};
+
+const CLOSING_BRACKETS = Object.fromEntries(Object.entries(BRACKET_PAIRS).map(([open, close]) => [close, open]));
+
 let capturedPage = null;
 let environment = null;
 let runnerUserConfigured = false;
@@ -169,6 +177,7 @@ const elements = {
   resetCode: document.querySelector("#reset-code"),
   sampleIo: document.querySelector("#sample-io"),
   runCode: document.querySelector("#run-code"),
+  codeEditor: document.querySelector("#code-editor"),
   lineNumbers: document.querySelector("#line-numbers"),
   code: document.querySelector("#code"),
   highlight: document.querySelector("#code-highlight code"),
@@ -340,7 +349,7 @@ async function markPanelOpened() {
   }
 
   await sendRuntimeMessage({
-    type: "ACCODER_PANEL_OPENED",
+    type: "ACMCODER_PANEL_OPENED",
     tabId: tab.id,
     url: tab.url || "",
   });
@@ -384,7 +393,7 @@ function ensureContentScript(tabId) {
 
 async function captureFromTab(tabId) {
   try {
-    return await sendTabMessage(tabId, { type: "ACCODER_CAPTURE" });
+    return await sendTabMessage(tabId, { type: "ACMCODER_CAPTURE" });
   } catch (error) {
     if (!isMissingReceiverError(error)) {
       throw error;
@@ -392,7 +401,7 @@ async function captureFromTab(tabId) {
 
     setStatus("页面脚本未连接，正在自动注入后重试...", "");
     await ensureContentScript(tabId);
-    return sendTabMessage(tabId, { type: "ACCODER_CAPTURE" });
+    return sendTabMessage(tabId, { type: "ACMCODER_CAPTURE" });
   }
 }
 
@@ -413,7 +422,37 @@ function classifyToken(token, language) {
   return "";
 }
 
-function highlightCode(code, language) {
+function wrapHighlightedSegment(text, className, startIndex, bracketMatch) {
+  if (!text) {
+    return "";
+  }
+
+  let result = "";
+  let cursor = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    if (!bracketMatch.has(startIndex + index)) {
+      continue;
+    }
+
+    if (index > cursor) {
+      const chunk = escapeHtml(text.slice(cursor, index));
+      result += className ? `<span class="${className}">${chunk}</span>` : chunk;
+    }
+
+    const classes = [className, "bracket-match"].filter(Boolean).join(" ");
+    result += `<span class="${classes}">${escapeHtml(text[index])}</span>`;
+    cursor = index + 1;
+  }
+
+  if (cursor < text.length) {
+    const chunk = escapeHtml(text.slice(cursor));
+    result += className ? `<span class="${className}">${chunk}</span>` : chunk;
+  }
+
+  return result;
+}
+
+function highlightCode(code, language, bracketMatch = new Set()) {
   const terms = [...(keywords[language] || []), ...types].map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   const common = terms.join("|");
   const wordPart = common ? `|\\b(?:${common})\\b` : "";
@@ -428,19 +467,78 @@ function highlightCode(code, language) {
     const token = match[0];
     const index = match.index;
     const className = classifyToken(token, language);
-    result += escapeHtml(code.slice(cursor, index));
-    result += className ? `<span class="${className}">${escapeHtml(token)}</span>` : escapeHtml(token);
+    result += wrapHighlightedSegment(code.slice(cursor, index), "", cursor, bracketMatch);
+    result += wrapHighlightedSegment(token, className, index, bracketMatch);
     cursor = index + token.length;
   }
-  result += escapeHtml(code.slice(cursor));
+  result += wrapHighlightedSegment(code.slice(cursor), "", cursor, bracketMatch);
   return result || "\n";
 }
 
+function findSelectedBracketIndex(value, selectionStart, selectionEnd) {
+  if (selectionEnd - selectionStart === 1 && (BRACKET_PAIRS[value[selectionStart]] || CLOSING_BRACKETS[value[selectionStart]])) {
+    return selectionStart;
+  }
+
+  if (selectionStart !== selectionEnd) {
+    return -1;
+  }
+
+  if (BRACKET_PAIRS[value[selectionStart]] || CLOSING_BRACKETS[value[selectionStart]]) {
+    return selectionStart;
+  }
+
+  const previous = selectionStart - 1;
+  if (previous >= 0 && (BRACKET_PAIRS[value[previous]] || CLOSING_BRACKETS[value[previous]])) {
+    return previous;
+  }
+
+  return -1;
+}
+
+function findMatchingBracket(value, bracketIndex) {
+  const bracket = value[bracketIndex];
+  const closing = BRACKET_PAIRS[bracket];
+  const opening = CLOSING_BRACKETS[bracket];
+
+  if (closing) {
+    let depth = 0;
+    for (let index = bracketIndex; index < value.length; index += 1) {
+      if (value[index] === bracket) depth += 1;
+      if (value[index] === closing) depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+
+  if (opening) {
+    let depth = 0;
+    for (let index = bracketIndex; index >= 0; index -= 1) {
+      if (value[index] === bracket) depth += 1;
+      if (value[index] === opening) depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+
+  return -1;
+}
+
+function getBracketMatch(value, selectionStart, selectionEnd) {
+  const bracketIndex = findSelectedBracketIndex(value, selectionStart, selectionEnd);
+  if (bracketIndex < 0) {
+    return new Set();
+  }
+
+  const matchingIndex = findMatchingBracket(value, bracketIndex);
+  return new Set(matchingIndex >= 0 ? [bracketIndex, matchingIndex] : [bracketIndex]);
+}
+
 function syncHighlight() {
-  elements.highlight.innerHTML = highlightCode(elements.code.value, elements.language.value);
+  const bracketMatch = getBracketMatch(elements.code.value, elements.code.selectionStart, elements.code.selectionEnd);
+  elements.highlight.innerHTML = highlightCode(elements.code.value, elements.language.value, bracketMatch);
   elements.highlight.parentElement.scrollTop = elements.code.scrollTop;
   elements.highlight.parentElement.scrollLeft = elements.code.scrollLeft;
   syncLineNumbers();
+  autoSizeCodeEditor();
 }
 
 function syncLineNumbers() {
@@ -452,9 +550,17 @@ function syncLineNumbers() {
   elements.lineNumbers.scrollTop = elements.code.scrollTop;
 }
 
+function autoSizeCodeEditor() {
+  const minHeight = Number.parseFloat(getComputedStyle(elements.codeEditor).minHeight) || 220;
+  elements.code.style.height = "auto";
+  const nextHeight = Math.max(minHeight, elements.code.scrollHeight);
+  elements.codeEditor.style.height = `${nextHeight}px`;
+  elements.code.style.height = "100%";
+}
+
 function sidebarWorkspaceKey(page = capturedPage) {
   const slug = page?.slug || "scratch";
-  return `accoder.sidebar.workspace.${slug}.${elements.language.value}`;
+  return `acmcoder.sidebar.workspace.${slug}.${elements.language.value}`;
 }
 
 async function saveWorkspaceCache() {
@@ -596,7 +702,7 @@ async function saveCapturedPage() {
   capturedPage = { ...capturedPage, progress: body.page.progress };
   renderProgress(body.page.progress);
   await cachePage(capturedPage);
-  setStatus(`已记忆到本地：${body.page.slug}。ACCoder 页面会自动加载。`, "ok");
+  setStatus(`已记忆到本地：${body.page.slug}。ACMCoder 页面会自动加载。`, "ok");
 }
 
 async function runCode() {
@@ -635,7 +741,7 @@ async function runCode() {
   } catch (error) {
     setRunResult({
       status: "ERROR",
-      message: error.message || "运行失败，请确认本地 ACCoder 服务已启动。",
+      message: error.message || "运行失败，请确认本地 ACMCoder 服务已启动。",
       stdout: "",
       stderr: "",
     });
@@ -898,6 +1004,9 @@ elements.code.addEventListener("input", () => {
   void saveWorkspaceCache();
 });
 elements.code.addEventListener("scroll", syncHighlight);
+elements.code.addEventListener("select", syncHighlight);
+elements.code.addEventListener("click", syncHighlight);
+elements.code.addEventListener("keyup", syncHighlight);
 elements.code.addEventListener("beforeinput", handleEditorBeforeInput);
 elements.code.addEventListener("keydown", handleEditorKeydown);
 elements.stdin.addEventListener("input", () => void saveWorkspaceCache());

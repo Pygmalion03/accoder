@@ -14,40 +14,25 @@ test("edge extension manifest exposes a side panel on leetcode pages", () => {
   assert.ok(manifest.host_permissions.includes("http://127.0.0.1:43117/*"));
 });
 
-test("background hides the panel on other tabs and restores tabs that opened it", () => {
+test("background opens the side panel directly from the extension icon and keeps it global", () => {
   const script = fs.readFileSync("extension/background.js", "utf8");
 
   assert.match(script, /isLeetCodeProblemUrl/);
-  assert.match(script, /const openedTabs = new Set\(\)/);
-  assert.match(script, /OPENED_TABS_KEY/);
-  assert.match(script, /chrome\.storage\.local\.get/);
-  assert.match(script, /chrome\.storage\.local\.set/);
-  assert.doesNotMatch(script, /chrome\.storage\.session/);
-  assert.match(script, /rememberOpenedTab/);
-  assert.match(script, /forgetOpenedTab/);
-  assert.match(script, /openedTabs\.add\(tabId\)/);
-  assert.match(script, /rememberOpenedTab\(tab\.id\)/);
-  assert.match(script, /rememberOpenedTab\(message\.tabId\)/);
-  assert.match(script, /openedTabs\.has\(tabId\)/);
-  assert.match(script, /chrome\.tabs\.onRemoved\.addListener/);
-  assert.match(script, /forgetOpenedTab\(tabId\)/);
   assert.match(script, /chrome\.action\.onClicked/);
-  assert.match(script, /openAccoderForTab/);
-  assert.match(script, /chrome\.sidePanel\.open\(\{\s*tabId/);
-  assert.match(script, /const shouldOpen = isLeetCodeProblemUrl\(url\) && openedTabs\.has\(tabId\)/);
-  assert.match(script, /enabled:\s*shouldOpen/);
-  assert.doesNotMatch(script, /if \(shouldOpen && chrome\.sidePanel\?\.open\)/);
-  assert.doesNotMatch(script, /restoreSidePanelForTab[\s\S]*chrome\.sidePanel\.open\(\{\s*tabId\s*\}/);
-  assert.match(script, /chrome\.tabs\.create\(\{\s*url:\s*LOCAL_BASE/);
-  assert.match(script, /setDefaultSidePanelClosed/);
+  assert.match(script, /openAcmcoderForTab/);
+  assert.match(script, /chrome\.sidePanel\.open\(\{\s*windowId/);
+  assert.match(script, /setPanelBehavior/);
+  assert.match(script, /openPanelOnActionClick:\s*true/);
+  assert.match(script, /setDefaultSidePanelOpen/);
+  assert.match(script, /enabled:\s*true/);
+  assert.doesNotMatch(script, /enabled:\s*false/);
+  assert.doesNotMatch(script, /openedTabs/);
+  assert.doesNotMatch(script, /OPENED_TABS_KEY/);
+  assert.doesNotMatch(script, /chrome\.tabs\.onActivated/);
   assert.match(script, /chrome\.runtime\.onInstalled\.addListener/);
-  assert.doesNotMatch(script, /chrome\.runtime\.onStartup/);
+  assert.match(script, /chrome\.runtime\.onStartup/);
   assert.doesNotMatch(script, /^configureSidePanelDefaults\(\);/m);
-  assert.match(script, /chrome\.tabs\.onUpdated/);
-  assert.match(script, /chrome\.tabs\.onActivated/);
-  assert.match(script, /ACCODER_PANEL_OPENED/);
-  assert.doesNotMatch(script, /openPanelOnActionClick/);
-  assert.doesNotMatch(script, /setPanelBehavior/);
+  assert.match(script, /ACMCODER_PANEL_OPENED/);
 });
 
 test("edge sidebar keeps only compact capture status plus the practice panel", () => {
@@ -68,7 +53,7 @@ test("edge sidebar keeps only compact capture status plus the practice panel", (
 test("content script reads question metadata from leetcode", () => {
   const script = fs.readFileSync("extension/content-script.js", "utf8");
 
-  assert.match(script, /ACCODER_CAPTURE/);
+  assert.match(script, /ACMCODER_CAPTURE/);
   assert.match(script, /captureLeetCodeProblem/);
   assert.match(script, /fetchQuestionData/);
   assert.match(script, /LEETCODE_CN_ORIGIN/);
@@ -94,7 +79,7 @@ test("sidebar caches the last captured problem", () => {
 
   assert.match(script, /lastPage/);
   assert.match(script, /loadCachedPage/);
-  assert.match(script, /ACCODER_PANEL_OPENED/);
+  assert.match(script, /ACMCODER_PANEL_OPENED/);
 });
 
 test("sidebar can run code through the local runner", () => {
@@ -109,7 +94,7 @@ test("sidebar can run code through the local runner", () => {
   assert.match(script, /runCode/);
   assert.match(script, /api\/run/);
   assert.match(script, /sidebarWorkspaceKey/);
-  assert.match(script, /runner:\s*"accoder\.sidebar\.runner"/);
+  assert.match(script, /runner:\s*"acmcoder\.sidebar\.runner"/);
   assert.match(script, /runner:\s*document\.querySelector\("#runner"\)/);
   assert.match(script, /runner:\s*elements\.runner\.value/);
   assert.match(script, /Running \$\{elements\.runner\.value\} runner/);
@@ -177,6 +162,26 @@ test("sidebar editor renders line numbers next to code", () => {
   assert.match(css, /#code\s*\{[\s\S]*color:\s*#d8dee9/);
   assert.match(script, /lineNumbers:\s*document\.querySelector\("#line-numbers"\)/);
   assert.match(script, /syncLineNumbers/);
+});
+
+test("sidebar editor highlights the matching bracket and grows without horizontal dragging", () => {
+  const html = fs.readFileSync("extension/sidebar.html", "utf8");
+  const css = fs.readFileSync("extension/sidebar.css", "utf8");
+  const script = fs.readFileSync("extension/sidebar.js", "utf8");
+
+  assert.match(html, /<textarea id="code"[^>]*wrap="soft"/);
+  assert.doesNotMatch(html, /<textarea id="code"[^>]*wrap="off"/);
+  assert.match(css, /\.bracket-match/);
+  assert.match(css, /white-space:\s*pre-wrap/);
+  assert.match(css, /overflow-wrap:\s*anywhere/);
+  assert.match(css, /overflow-x:\s*hidden/);
+  assert.match(css, /\.code-editor\s*\{[\s\S]*resize:\s*none/);
+  assert.match(script, /codeEditor:\s*document\.querySelector\("#code-editor"\)/);
+  assert.match(script, /findMatchingBracket/);
+  assert.match(script, /getBracketMatch/);
+  assert.match(script, /autoSizeCodeEditor/);
+  assert.match(script, /addEventListener\("select", syncHighlight\)/);
+  assert.match(script, /addEventListener\("keyup", syncHighlight\)/);
 });
 
 test("sidebar editor skips over already inserted closing brackets", () => {
