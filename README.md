@@ -1,15 +1,24 @@
 # ACMCoder
 
-基于 LeetCode 题目索引的本地 ACM 练习器。第一版先跑通本地真实执行闭环：题单、ACM 输入输出协议、固定样例、自定义输入、CLI 和本地 Web。
+基于 LeetCode 题目索引的本地 ACM 练习器。它把 LeetCode 题目页、浏览器侧栏、本地 Web、ACM 输入输出和真实代码执行串起来：题面仍然在 LeetCode 看，代码在 ACMCoder 里按 ACM 模式练。
 
 ## 快速开始
 
-先分清两个概念：
+推荐的新用户路径是：**先启动本地 ACMCoder 服务，再加载浏览器插件，然后在 LeetCode 题目页打开侧栏练习**。
+
+ACMCoder 现在有两个入口：
+
+- **浏览器插件侧栏**：日常刷 LeetCode 时最顺手。打开题目页，点 ACMCoder 扩展图标，侧栏会读取当前题目并提供代码区、自测输入、运行结果和记忆缓存。
+- **本地 Web 页面**：打开 `http://127.0.0.1:43117`，用于查看题单、管理插件记忆题目、导入导出、直接练内置种子题。
+
+先分清两个概念，后面的安装步骤就不会混：
 
 - **启动方式**决定 ACMCoder Web 服务在哪里跑。
 - **运行模式**决定你点 `Run` 时，代码交给哪套编译/运行环境。
 
-普通用户优先走 **Docker app**：Web 服务和 Java/C++/Python 工具链都在同一个 app 容器里。用户只需要 Docker Desktop，不需要另装 Node.js、Java、C++ 或 Python：
+## 1. 启动 ACMCoder 服务
+
+普通用户优先走 **Docker app**：Web 服务和 Java/C++/Python 工具链都在同一个 app 容器里。你只需要 Docker Desktop，不需要另装 Node.js、Java、C++ 或 Python。
 
 ```bash
 git clone https://github.com/Pygmalion03/acmcoder.git
@@ -17,15 +26,19 @@ cd acmcoder
 docker compose -f docker-compose.prebuilt.yml up -d
 ```
 
-打开：
+如果不想安装 Git，也可以在 GitHub 页面下载源码 ZIP，解压后在目录里运行同一条命令：
+
+```bash
+docker compose -f docker-compose.prebuilt.yml up -d
+```
+
+服务启动后打开本地 Web：
 
 ```text
 http://127.0.0.1:43117
 ```
 
-如果不想安装 Git，也可以在 GitHub 页面下载源码 ZIP，解压后在目录里运行同一条 `docker compose -f docker-compose.prebuilt.yml up -d`。
-
-进入页面后，Docker app 用户看到的运行模式是 `内置环境`。它就是 app 容器里自带的编译环境，直接选它运行代码；不要把它和下面的 `Docker runner` 混为一类。
+Docker app 用户在页面里看到的运行模式是 `内置环境`。它就是 app 容器里自带的编译环境，直接选它运行代码；不要把它和下面的 `Docker runner` 混为一类。
 
 停止服务：
 
@@ -41,6 +54,35 @@ docker compose -f docker-compose.prebuilt.yml pull
 docker compose -f docker-compose.prebuilt.yml up -d
 ```
 
+## 2. 安装浏览器插件
+
+当前插件先走手动加载，不依赖 Edge Add-ons 或 Chrome Web Store。插件目录就是仓库里的：
+
+```text
+extension/
+```
+
+安装步骤：
+
+1. 确认上一步的 ACMCoder 服务已经启动，`http://127.0.0.1:43117` 可以打开。
+2. Edge 打开 `edge://extensions/`；Chrome 打开 `chrome://extensions/`。
+3. 打开右上角的 `Developer mode` / 开发者模式。
+4. 点击 `Load unpacked` / 加载已解压的扩展程序。
+5. 选择项目里的 `extension/` 目录，不要选择 ZIP 文件本身。
+6. 打开 LeetCode 题目页，例如 `https://leetcode.cn/problems/reverse-linked-list/`。
+7. 点击浏览器工具栏里的 ACMCoder 扩展图标，侧栏会直接打开。
+
+侧栏是这个项目很重要的使用形态：题目描述、约束和示例继续看 LeetCode 页面；侧栏负责把当前题目记忆到本地、提供 ACM 模板、自测输入、`Run` 结果、AC 次数和可选模型建议。更完整的插件说明见 `docs/edge-extension.md`。
+
+## 3. 日常使用流程
+
+1. 启动本地服务：Docker 用户运行 `docker compose -f docker-compose.prebuilt.yml up -d`，源码用户运行 `npm start`。
+2. 打开 LeetCode 题目页。
+3. 点击 ACMCoder 扩展图标打开侧栏。
+4. 选择语言，按 ACM 输入输出协议补全代码。
+5. 填自测输入和可选预期输出，点击 `Run`。
+6. 需要回到完整题目列表、导出/导入记忆题目时，打开 `http://127.0.0.1:43117`。
+
 ## 版本与发布物
 
 这个项目有三类容易混淆的东西：
@@ -53,9 +95,9 @@ docker compose -f docker-compose.prebuilt.yml up -d
 
 ```text
 ghcr.io/pygmalion03/acmcoder-app:latest
-ghcr.io/pygmalion03/acmcoder-app:v2.2.0
+ghcr.io/pygmalion03/acmcoder-app:v2.2.1
 ghcr.io/pygmalion03/acmcoder-runner:latest
-ghcr.io/pygmalion03/acmcoder-runner:v2.2.0
+ghcr.io/pygmalion03/acmcoder-runner:v2.2.1
 ```
 
 Release 的价值是让用户在 GitHub 页面上看到“这是哪个版本、改了什么、应该怎么启动”。没有 Release 也不影响 Docker 镜像运行，但有 Release 更适合公开项目使用。
@@ -74,6 +116,7 @@ Release 的价值是让用户在 GitHub 页面上看到“这是哪个版本、�
 - 支持 Java、C++、Python。
 - 支持本机 `javac`、`g++`、`python` 真实运行，也支持 Docker runner。
 - 支持预构建 Docker app，用户只装 Docker 也能打开 Web 使用。
+- 支持 Edge/Chrome 手动加载浏览器插件，在 LeetCode 题目页打开侧栏练习。
 - 不分发完整 LeetCode 题面，只保留题目索引、链接和自维护 ACM 协议。
 - 不使用 LLM 作为判题器。
 
@@ -216,7 +259,7 @@ web                      本地练习页面
 
 ## 后续
 
-下一步更值得做的是更多题目贡献规范和镜像发布后的安装体验。浏览器插件可以复用当前本地 HTTP API。
+下一步更值得做的是更多题目贡献规范、浏览器插件打包发布和更顺的一键安装体验。当前插件已经能手动加载使用，但还没有发布到 Edge Add-ons 或 Chrome Web Store。
 
 ## 插件记忆模式接口
 
@@ -246,16 +289,7 @@ docs/extension-memory-mode.md
 extension/
 ```
 
-当前插件先走手动加载，不依赖扩展商店。用户在自己的浏览器上安装时按这个顺序：
-
-1. 先启动本地 ACMCoder 服务：Docker 用户运行 `docker compose -f docker-compose.prebuilt.yml up -d`，源码用户运行 `npm start`。
-2. Edge 打开 `edge://extensions/`；Chrome 打开 `chrome://extensions/`。
-3. 打开右上角的 `Developer mode` / 开发者模式。
-4. 点击 `Load unpacked` / 加载已解压的扩展程序。
-5. 选择项目里的 `extension/` 目录，不要选择 ZIP 文件本身。
-6. 打开 LeetCode 题目页后点击 ACMCoder 扩展图标，浏览器会直接打开侧栏；侧栏是窗口级常驻的，切换页面不会自动关闭。
-
-更完整的加载说明见：
+当前插件先走手动加载，不依赖扩展商店。快速安装步骤见 README 顶部的“安装浏览器插件”；更完整的加载说明见：
 
 ```text
 docs/edge-extension.md

@@ -314,7 +314,7 @@ label,
   overflow: hidden;
   overflow-x: hidden;
   background: transparent;
-  color: #d8dee9;
+  color: transparent;
   caret-color: #f8fafc;
   outline: none;
   appearance: none;
@@ -328,7 +328,7 @@ label,
 
 #code::selection {
   background: rgba(78, 132, 196, 0.45);
-  color: #f8fafc;
+  color: transparent;
 }
 
 .tok-keyword {

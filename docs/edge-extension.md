@@ -1,5 +1,7 @@
 # 浏览器插件使用说明
 
+浏览器插件是 ACMCoder 面向 LeetCode 日常练习的主要入口之一。用户不用把题目复制到本地页面：在 LeetCode 题目页点击 ACMCoder 扩展图标，侧栏会读取当前题目，提供 ACM 模板、自测输入、运行结果和本地记忆。
+
 当前插件先走手动加载，还没有把 Edge Add-ons 或 Chrome Web Store 当成安装入口。下载仓库源码或源码 ZIP 并解压后，插件目录是：
 
 ```text
@@ -8,7 +10,7 @@ extension/
 
 ## 加载方式
 
-1. 先启动 ACMCoder 服务。插件本身不包含 Web 服务和运行环境，必须连到本地 ACMCoder。只有 Docker 的用户可以运行：
+1. 先启动 ACMCoder 服务。插件本身不包含 Web 服务和运行环境，必须连到本地 ACMCoder。只有 Docker 的普通用户推荐运行：
 
 ```bash
 docker compose -f docker-compose.prebuilt.yml up -d
@@ -30,6 +32,17 @@ npm start
 刚重新加载过扩展时，第一次读取题目可能遇到 `Could not establish connection. Receiving end does not exist.`。当前版本会自动注入 content script 并重试；如果仍失败，刷新一次 LeetCode 题目页再读。
 
 侧栏现在按浏览器窗口启用，不再绑定到单个 LeetCode tab。点击扩展图标会直接打开侧栏，切换页面或 tab 时侧栏保持打开；只有用户手动关闭侧栏时才会收起。
+
+## 使用顺序
+
+日常使用按这个顺序最稳：
+
+1. 保持本地服务运行，Docker app 用户确认页面运行模式显示为 `内置环境`。
+2. 打开任意 LeetCode 题目页。
+3. 点击 ACMCoder 扩展图标打开侧栏。
+4. 选择语言，按 ACM 输入输出补代码。
+5. 填自测输入和可选预期输出，点击 `Run`。
+6. 需要管理记忆题目、导出/导入数据或练内置种子题时，再打开 `http://127.0.0.1:43117`。
 
 ## 当前侧栏
 

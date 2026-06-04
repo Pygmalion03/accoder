@@ -159,7 +159,10 @@ test("sidebar editor renders line numbers next to code", () => {
   assert.match(css, /\.code-scroll\s*\{[\s\S]*height:\s*100%/);
   assert.match(css, /#code,\s*#code-highlight,\s*\.line-numbers\s*\{[\s\S]*height:\s*100%/);
   assert.match(css, /#code\s*\{[\s\S]*resize:\s*none/);
-  assert.match(css, /#code\s*\{[\s\S]*color:\s*#d8dee9/);
+  assert.match(css, /#code-highlight\s*\{[\s\S]*color:\s*#d8dee9/);
+  assert.match(css, /#code\s*\{[\s\S]*color:\s*transparent/);
+  assert.match(css, /#code\s*\{[\s\S]*caret-color:\s*#f8fafc/);
+  assert.match(css, /#code::selection\s*\{[\s\S]*color:\s*transparent/);
   assert.match(script, /lineNumbers:\s*document\.querySelector\("#line-numbers"\)/);
   assert.match(script, /syncLineNumbers/);
 });
