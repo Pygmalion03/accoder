@@ -21,13 +21,13 @@ test("documentation points users to the acmcoder repo and packages", () => {
   assert.match(readme, /github\.com\/Pygmalion03\/acmcoder\.git/);
   assert.match(readme, /ghcr\.io\/pygmalion03\/acmcoder-app:latest/);
   assert.match(readme, /ghcr\.io\/pygmalion03\/acmcoder-runner:latest/);
-  assert.match(readme, /ghcr\.io\/pygmalion03\/acmcoder-app:v2\.2\.1/);
-  assert.match(deployment, /ghcr\.io\/pygmalion03\/acmcoder-app:v2\.2\.1/);
+  assert.match(readme, /ghcr\.io\/pygmalion03\/acmcoder-app:v2\.2\.2/);
+  assert.match(deployment, /ghcr\.io\/pygmalion03\/acmcoder-app:v2\.2\.2/);
   assert.match(compose, /ghcr\.io\/pygmalion03\/acmcoder-app:latest/);
   assert.match(workflow, /acmcoder-\$\{\{ matrix\.name \}\}/);
   assert.doesNotMatch(readme, /github\.com\/Pygmalion03\/accoder/);
-  assert.doesNotMatch(readme, /v2\.2\.0/);
-  assert.doesNotMatch(deployment, /v2\.2\.0/);
+  assert.doesNotMatch(readme, /v2\.2\.[01]/);
+  assert.doesNotMatch(deployment, /v2\.2\.[01]/);
   assert.doesNotMatch(compose, /accoder-/);
   assert.doesNotMatch(workflow, /accoder-/);
 });

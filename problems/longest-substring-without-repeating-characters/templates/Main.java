@@ -1,10 +1,8 @@
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.util.Scanner;
 
 public class Main {
-    public static void main(String[] args) throws Exception {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-        // TODO: parse stdin and print the answer
-        String line = reader.readLine();
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        // TODO: read input and print the answer
     }
 }

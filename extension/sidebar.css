@@ -273,8 +273,8 @@ label,
   line-height: 1.55;
   letter-spacing: 0;
   tab-size: 4;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  white-space: pre;
+  overflow-wrap: normal;
 }
 
 .line-numbers {
@@ -299,7 +299,7 @@ label,
 
 #code-highlight code {
   display: block;
-  min-width: 0;
+  min-width: max-content;
   padding: 12px;
 }
 

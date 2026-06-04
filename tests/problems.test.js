@@ -42,6 +42,12 @@ test("seed problems share simple templates instead of bundled answers", () => {
     assert.equal(new Set(templates).size, 1);
     assert.match(templates[0], /TODO/);
   }
+
+  const javaTemplate = fs.readFileSync("problems/reverse-linked-list/templates/Main.java", "utf8");
+  assert.match(javaTemplate, /import java\.util\.Scanner/);
+  assert.match(javaTemplate, /Scanner sc = new Scanner\(System\.in\)/);
+  assert.doesNotMatch(javaTemplate, /BufferedReader/);
+  assert.doesNotMatch(javaTemplate, /InputStreamReader/);
 });
 
 test("throws a clear error for an unknown problem", () => {

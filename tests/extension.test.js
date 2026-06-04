@@ -167,17 +167,18 @@ test("sidebar editor renders line numbers next to code", () => {
   assert.match(script, /syncLineNumbers/);
 });
 
-test("sidebar editor highlights the matching bracket and grows without horizontal dragging", () => {
+test("sidebar editor keeps caret aligned by disabling soft wrapping", () => {
   const html = fs.readFileSync("extension/sidebar.html", "utf8");
   const css = fs.readFileSync("extension/sidebar.css", "utf8");
   const script = fs.readFileSync("extension/sidebar.js", "utf8");
 
-  assert.match(html, /<textarea id="code"[^>]*wrap="soft"/);
-  assert.doesNotMatch(html, /<textarea id="code"[^>]*wrap="off"/);
+  assert.match(html, /<textarea id="code"[^>]*wrap="off"/);
+  assert.doesNotMatch(html, /<textarea id="code"[^>]*wrap="soft"/);
   assert.match(css, /\.bracket-match/);
-  assert.match(css, /white-space:\s*pre-wrap/);
-  assert.match(css, /overflow-wrap:\s*anywhere/);
+  assert.match(css, /white-space:\s*pre/);
+  assert.match(css, /overflow-wrap:\s*normal/);
   assert.match(css, /overflow-x:\s*hidden/);
+  assert.match(css, /#code-highlight code\s*\{[\s\S]*min-width:\s*max-content/);
   assert.match(css, /\.code-editor\s*\{[\s\S]*resize:\s*none/);
   assert.match(script, /codeEditor:\s*document\.querySelector\("#code-editor"\)/);
   assert.match(script, /findMatchingBracket/);
@@ -197,4 +198,14 @@ test("sidebar editor skips over already inserted closing brackets", () => {
   assert.match(script, /elements\.code\.value\[elements\.code\.selectionStart\] === event\.data/);
   assert.match(script, /setSelectionRange\(elements\.code\.selectionStart \+ 1/);
   assert.match(script, /addEventListener\("beforeinput", handleEditorBeforeInput\)/);
+});
+
+test("sidebar generic Java template is compact for the narrow side panel", () => {
+  const script = fs.readFileSync("extension/sidebar.js", "utf8");
+  const javaTemplate = script.match(/java: `([\s\S]*?)`,\r?\n\s+cpp:/)?.[1] || "";
+
+  assert.match(javaTemplate, /import java\.util\.Scanner/);
+  assert.match(javaTemplate, /Scanner sc = new Scanner\(System\.in\)/);
+  assert.doesNotMatch(javaTemplate, /BufferedReader/);
+  assert.doesNotMatch(javaTemplate, /InputStreamReader/);
 });

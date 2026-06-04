@@ -95,9 +95,9 @@ extension/
 
 ```text
 ghcr.io/pygmalion03/acmcoder-app:latest
-ghcr.io/pygmalion03/acmcoder-app:v2.2.1
+ghcr.io/pygmalion03/acmcoder-app:v2.2.2
 ghcr.io/pygmalion03/acmcoder-runner:latest
-ghcr.io/pygmalion03/acmcoder-runner:v2.2.1
+ghcr.io/pygmalion03/acmcoder-runner:v2.2.2
 ```
 
 Release 的价值是让用户在 GitHub 页面上看到“这是哪个版本、改了什么、应该怎么启动”。没有 Release 也不影响 Docker 镜像运行，但有 Release 更适合公开项目使用。
