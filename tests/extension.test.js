@@ -179,6 +179,8 @@ test("sidebar editor keeps caret aligned by disabling soft wrapping", () => {
   assert.match(css, /overflow-wrap:\s*normal/);
   assert.match(css, /overflow-x:\s*hidden/);
   assert.match(css, /#code-highlight code\s*\{[\s\S]*min-width:\s*max-content/);
+  assert.match(css, /#code-highlight code\s*\{[\s\S]*font:\s*inherit/);
+  assert.match(css, /#code-highlight code\s*\{[\s\S]*white-space:\s*inherit/);
   assert.match(css, /\.code-editor\s*\{[\s\S]*resize:\s*none/);
   assert.match(script, /codeEditor:\s*document\.querySelector\("#code-editor"\)/);
   assert.match(script, /findMatchingBracket/);

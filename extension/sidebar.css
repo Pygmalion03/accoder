@@ -300,7 +300,12 @@ label,
 #code-highlight code {
   display: block;
   min-width: max-content;
+  font: inherit;
+  letter-spacing: inherit;
   padding: 12px;
+  tab-size: inherit;
+  white-space: inherit;
+  overflow-wrap: inherit;
 }
 
 #code {
