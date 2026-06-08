@@ -94,6 +94,9 @@ test("web editor keeps caret aligned by disabling soft wrapping", () => {
   assert.match(css, /white-space:\s*pre/);
   assert.match(css, /overflow-wrap:\s*normal/);
   assert.match(css, /overflow-x:\s*hidden/);
+  assert.match(css, /#code-highlight\s*\{[\s\S]*padding:\s*0/);
+  assert.match(css, /#code-highlight\s*\{[\s\S]*max-height:\s*none/);
+  assert.match(css, /#code-highlight\s*\{[\s\S]*background:\s*transparent/);
   assert.match(css, /#code-highlight code\s*\{[\s\S]*min-width:\s*max-content/);
   assert.match(css, /#code-highlight code\s*\{[\s\S]*font:\s*inherit/);
   assert.match(css, /#code-highlight code\s*\{[\s\S]*white-space:\s*inherit/);

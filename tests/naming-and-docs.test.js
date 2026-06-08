@@ -21,13 +21,13 @@ test("documentation points users to the acmcoder repo and packages", () => {
   assert.match(readme, /github\.com\/Pygmalion03\/acmcoder\.git/);
   assert.match(readme, /ghcr\.io\/pygmalion03\/acmcoder-app:latest/);
   assert.match(readme, /ghcr\.io\/pygmalion03\/acmcoder-runner:latest/);
-  assert.match(readme, /ghcr\.io\/pygmalion03\/acmcoder-app:v2\.2\.3/);
-  assert.match(deployment, /ghcr\.io\/pygmalion03\/acmcoder-app:v2\.2\.3/);
+  assert.match(readme, /ghcr\.io\/pygmalion03\/acmcoder-app:v2\.2\.4/);
+  assert.match(deployment, /ghcr\.io\/pygmalion03\/acmcoder-app:v2\.2\.4/);
   assert.match(compose, /ghcr\.io\/pygmalion03\/acmcoder-app:latest/);
   assert.match(workflow, /acmcoder-\$\{\{ matrix\.name \}\}/);
   assert.doesNotMatch(readme, /github\.com\/Pygmalion03\/accoder/);
-  assert.doesNotMatch(readme, /v2\.2\.[0-2]/);
-  assert.doesNotMatch(deployment, /v2\.2\.[0-2]/);
+  assert.doesNotMatch(readme, /v2\.2\.[0-3]/);
+  assert.doesNotMatch(deployment, /v2\.2\.[0-3]/);
   assert.doesNotMatch(compose, /accoder-/);
   assert.doesNotMatch(workflow, /accoder-/);
 });
@@ -43,6 +43,7 @@ test("browser extension install docs cover Edge and Chrome manual loading", () =
   assert.match(combined, /Load unpacked/i);
   assert.match(combined, /extension\//);
   assert.match(readme, /浏览器插件侧栏/);
-  assert.match(readme, /## 2\. 安装浏览器插件/);
+  assert.match(readme, /## 安装浏览器插件/);
+  assert.match(readme, /## 另一台设备怎么更新/);
   assert.match(extensionDoc, /浏览器插件是 ACMCoder 面向 LeetCode 日常练习的主要入口之一/);
 });

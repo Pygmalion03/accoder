@@ -292,7 +292,11 @@ label,
   position: absolute;
   inset: 0;
   display: block;
+  max-height: none;
   overflow: hidden;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
   color: #d8dee9;
   pointer-events: none;
 }
