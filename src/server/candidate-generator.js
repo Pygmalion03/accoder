@@ -175,7 +175,11 @@ function scoreCandidate(candidate, item, settings, todayTime) {
     reasons.push("matches target tags");
   }
 
-  score += difficultyWeights[settings.difficultyPressure][candidate.difficulty] ?? 0;
+  const difficultyWeight = difficultyWeights[settings.difficultyPressure][candidate.difficulty] ?? 0;
+  if (difficultyWeight !== 0) {
+    score += difficultyWeight;
+    reasons.push("difficulty fit");
+  }
 
   const acceptedCount = normalizeAcceptedCount(item?.acceptedCount);
   if (acceptedCount === 0) {
@@ -183,6 +187,7 @@ function scoreCandidate(candidate, item, settings, todayTime) {
     reasons.push("not accepted yet");
   } else {
     score -= acceptedCount * 8;
+    reasons.push("already accepted");
   }
 
   if (item?.wantPracticeAgain === true) {
@@ -215,13 +220,25 @@ function scoreCandidate(candidate, item, settings, todayTime) {
 }
 
 function candidateSort(a, b) {
-  return b.score - a.score || a.sourceRank - b.sourceRank || a.leetcodeSlug.localeCompare(b.leetcodeSlug);
+  return b.score - a.score || a.sourceRank - b.sourceRank || compareAsciiStrings(a.leetcodeSlug, b.leetcodeSlug);
+}
+
+function compareAsciiStrings(a, b) {
+  if (a < b) {
+    return -1;
+  }
+
+  if (a > b) {
+    return 1;
+  }
+
+  return 0;
 }
 
 export function generateCandidates({
   catalogEntries = [],
   practiceProfile = {},
-  today = new Date().toISOString(),
+  today,
   limit = 30,
 } = {}) {
   const settings = {

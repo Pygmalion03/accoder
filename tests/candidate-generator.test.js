@@ -209,6 +209,34 @@ test("uses source rank and slug for deterministic ties", () => {
   );
 });
 
+test("uses ASCII string comparison for slug tie-breaks", () => {
+  const tiedCandidates = generateCandidates({
+    catalogEntries: [
+      {
+        leetcodeSlug: "a-problem",
+        title: "Lowercase A Problem",
+        leetcodeUrl: "https://leetcode.cn/problems/a-problem/",
+        difficulty: "unknown",
+        frequencyScore: 0,
+        sourceRank: 1,
+      },
+      {
+        leetcodeSlug: "A-problem",
+        title: "Uppercase A Problem",
+        leetcodeUrl: "https://leetcode.cn/problems/A-problem/",
+        difficulty: "unknown",
+        frequencyScore: 0,
+        sourceRank: 1,
+      },
+    ],
+  });
+
+  assert.deepEqual(
+    tiedCandidates.map((candidate) => candidate.leetcodeSlug),
+    ["A-problem", "a-problem"],
+  );
+});
+
 test("returns slug and url aliases without replacing canonical LeetCode fields", () => {
   const [candidate] = generateCandidates({
     catalogEntries: [catalog[0]],
@@ -218,6 +246,96 @@ test("returns slug and url aliases without replacing canonical LeetCode fields",
   assert.equal(candidate.slug, candidate.leetcodeSlug);
   assert.equal(candidate.leetcodeUrl, "https://leetcode.cn/problems/two-sum/");
   assert.equal(candidate.url, candidate.leetcodeUrl);
+});
+
+test("skips cooldown scoring when today is missing or invalid", () => {
+  const request = {
+    catalogEntries: [
+      {
+        leetcodeSlug: "accepted-yesterday",
+        title: "Accepted Yesterday",
+        leetcodeUrl: "https://leetcode.cn/problems/accepted-yesterday/",
+        difficulty: "unknown",
+        frequencyScore: 0,
+      },
+    ],
+    practiceProfile: {
+      settings: { cooldownDays: 3 },
+      items: {
+        "accepted-yesterday": {
+          acceptedCount: 1,
+          lastPracticedAt: "2026-07-08T00:00:00.000Z",
+        },
+      },
+    },
+  };
+
+  const [missingToday] = generateCandidates(request);
+  const [invalidToday] = generateCandidates({ ...request, today: "not-a-date" });
+
+  assert.equal(missingToday.score, -8);
+  assert.doesNotMatch(missingToday.reasons.join(" "), /recently practiced|ready for revisit/);
+  assert.equal(invalidToday.score, -8);
+  assert.doesNotMatch(invalidToday.reasons.join(" "), /recently practiced|ready for revisit/);
+});
+
+test("applies cooldown scoring when today is explicit", () => {
+  const [candidate] = generateCandidates({
+    catalogEntries: [
+      {
+        leetcodeSlug: "recently-accepted",
+        title: "Recently Accepted",
+        leetcodeUrl: "https://leetcode.cn/problems/recently-accepted/",
+        difficulty: "unknown",
+        frequencyScore: 0,
+      },
+    ],
+    practiceProfile: {
+      settings: { cooldownDays: 3 },
+      items: {
+        "recently-accepted": {
+          acceptedCount: 1,
+          lastPracticedAt: "2026-07-08T00:00:00.000Z",
+        },
+      },
+    },
+    today: "2026-07-09T00:00:00.000Z",
+  });
+
+  assert.equal(candidate.score, -48);
+  assert.match(candidate.reasons.join(" "), /recently practiced/);
+});
+
+test("adds reasons for difficulty fit and accepted penalties", () => {
+  const candidates = generateCandidates({
+    catalogEntries: [
+      {
+        leetcodeSlug: "medium-fit",
+        title: "Medium Fit",
+        leetcodeUrl: "https://leetcode.cn/problems/medium-fit/",
+        difficulty: "medium",
+        frequencyScore: 0,
+      },
+      {
+        leetcodeSlug: "accepted-once",
+        title: "Accepted Once",
+        leetcodeUrl: "https://leetcode.cn/problems/accepted-once/",
+        difficulty: "unknown",
+        frequencyScore: 0,
+      },
+    ],
+    practiceProfile: {
+      settings: { difficultyPressure: "standard" },
+      items: {
+        "accepted-once": { acceptedCount: 1 },
+      },
+    },
+  });
+  const mediumFit = candidates.find((candidate) => candidate.leetcodeSlug === "medium-fit");
+  const acceptedOnce = candidates.find((candidate) => candidate.leetcodeSlug === "accepted-once");
+
+  assert.match(mediumFit.reasons.join(" "), /difficulty fit/);
+  assert.match(acceptedOnce.reasons.join(" "), /already accepted/);
 });
 
 test("scores skipped candidates with a penalty and reason", () => {
@@ -321,4 +439,5 @@ test("penalizes accepted counts by exactly eight points each", () => {
   });
 
   assert.equal(candidate.score, -16);
+  assert.match(candidate.reasons.join(" "), /already accepted/);
 });
