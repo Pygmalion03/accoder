@@ -4,6 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { findProblem, loadProblems, projectRoot, resolveProjectPath } from "../core/problems.js";
+import { generateCandidates } from "./candidate-generator.js";
 import {
   getDefaultAssistSettingsFile,
   getPublicAssistSettings,
@@ -11,6 +12,12 @@ import {
   requestCodeAdvice,
   saveAssistSettings,
 } from "./assist.js";
+import {
+  generateDailyPlan,
+  getDefaultDailyPlanFile,
+  loadDailyPlan,
+  updateDailyPlanItemAction,
+} from "./daily-plan.js";
 import { createEnvironmentReport } from "./doctor.js";
 import {
   deleteProblems,
@@ -31,6 +38,12 @@ import {
   saveMemoryPage,
 } from "./memory.js";
 import {
+  buildPracticeProfile,
+  getDefaultPlannerProfileFile,
+  loadPlannerProfile,
+  updatePlannerAction,
+} from "./planner-profile.js";
+import {
   getDefaultProgressFile,
   loadProgressItems,
   progressForSlug,
@@ -38,6 +51,11 @@ import {
   withPageProgress,
   withProblemProgress,
 } from "./progress.js";
+import {
+  getDefaultRecommendationCatalogFile,
+  importRecommendationCatalog,
+  loadRecommendationCatalog,
+} from "./recommendation-catalog.js";
 import { checkDockerRunner as defaultCheckDockerRunner } from "../runner/docker-runner.js";
 import { checkToolchain as defaultCheckToolchain, listLanguages as defaultListLanguages } from "../runner/toolchains.js";
 
@@ -128,6 +146,62 @@ async function readTemplate(slug, language) {
   return fs.readFile(path.join(projectRoot, "problems", slug, "templates", fileName), "utf8");
 }
 
+function localDateString(date = new Date()) {
+  const localTime = new Date(date.getTime() - date.getTimezoneOffset() * 60 * 1000);
+  return localTime.toISOString().slice(0, 10);
+}
+
+function todayDate(value) {
+  const date = String(value || "").trim();
+  return date ? date.slice(0, 10) : localDateString();
+}
+
+function memoryPageFromPlanItem(item) {
+  return {
+    source: "leetcode",
+    url: item.leetcodeUrl,
+    slug: item.leetcodeSlug,
+    frontendId: "",
+    title: item.title || item.leetcodeSlug,
+    difficulty: item.difficulty || "",
+    tags: Array.isArray(item.tags) ? item.tags : [],
+    sample: null,
+    content: `Open the LeetCode link for the full statement. ACMCoder stores only recommendation metadata for ${item.title || item.leetcodeSlug}.`,
+    capturedAt: new Date().toISOString(),
+  };
+}
+
+async function buildDailyPlannerInputs({ recommendationCatalogFile, plannerProfileFile, progressFile, options = {} }) {
+  const catalog = await loadRecommendationCatalog(recommendationCatalogFile);
+  const profile = await loadPlannerProfile(plannerProfileFile);
+  const progressItems = await loadProgressItems(progressFile);
+  const requestSettings = {
+    ...profile.settings,
+    dailyCount: options.count || profile.settings.dailyCount,
+    difficultyPressure: options.difficultyPressure || profile.settings.difficultyPressure,
+    targetTags: Array.isArray(options.targetTags) ? options.targetTags : profile.settings.targetTags,
+  };
+  const practiceProfile = buildPracticeProfile({
+    profile: {
+      ...profile,
+      settings: requestSettings,
+    },
+    progressItems,
+  });
+  const candidates = generateCandidates({
+    catalogEntries: catalog.entries,
+    practiceProfile,
+    today: todayDate(options.date),
+  });
+
+  return {
+    catalog,
+    profile,
+    practiceProfile,
+    candidates,
+  };
+}
+
 async function serveStatic(requestUrl, response) {
   const requestedPath = requestUrl.pathname === "/" ? "/index.html" : requestUrl.pathname;
   const webRoot = path.join(projectRoot, "web");
@@ -154,6 +228,9 @@ export function createAcmcoderServer(options = {}) {
   const deletedProblemsFile = options.deletedProblemsFile || getDefaultDeletedProblemsFile();
   const progressFile = options.progressFile || getDefaultProgressFile();
   const assistSettingsFile = options.assistSettingsFile || getDefaultAssistSettingsFile();
+  const recommendationCatalogFile = options.recommendationCatalogFile || getDefaultRecommendationCatalogFile();
+  const plannerProfileFile = options.plannerProfileFile || getDefaultPlannerProfileFile();
+  const dailyPlanFile = options.dailyPlanFile || getDefaultDailyPlanFile();
   const runSubmission = options.runSubmission || defaultRunSubmission;
   const assistFetch = options.assistFetch || globalThis.fetch;
   const listLanguages = options.listLanguages || defaultListLanguages;
@@ -166,6 +243,74 @@ export function createAcmcoderServer(options = {}) {
     try {
       if (request.method === "OPTIONS") {
         sendNoContent(response);
+        return;
+      }
+
+      if (request.method === "GET" && requestUrl.pathname === "/api/recommendation/catalog") {
+        const catalog = await loadRecommendationCatalog(recommendationCatalogFile);
+        sendJson(response, 200, { catalog });
+        return;
+      }
+
+      if (request.method === "POST" && requestUrl.pathname === "/api/recommendation/import") {
+        const body = await readJsonBody(request);
+        const result = await importRecommendationCatalog(body, recommendationCatalogFile);
+        sendJson(response, 200, result);
+        return;
+      }
+
+      if (request.method === "POST" && requestUrl.pathname === "/api/recommendation/sync-codetop") {
+        sendJson(response, 501, { error: "CodeTop sync is not available in this MVP. Import a recommendation JSON file instead." });
+        return;
+      }
+
+      if (request.method === "GET" && requestUrl.pathname === "/api/daily-plan/today") {
+        const date = todayDate(requestUrl.searchParams.get("date"));
+        const plan = await loadDailyPlan(date, dailyPlanFile);
+        sendJson(response, 200, { plan });
+        return;
+      }
+
+      if (request.method === "POST" && requestUrl.pathname === "/api/daily-plan/generate") {
+        const body = await readJsonBody(request);
+        const date = todayDate(body.date);
+        const { candidates, practiceProfile } = await buildDailyPlannerInputs({
+          recommendationCatalogFile,
+          plannerProfileFile,
+          progressFile,
+          options: body,
+        });
+        const settings = await loadAssistSettings(assistSettingsFile);
+        const plan = await generateDailyPlan({
+          candidates,
+          date,
+          count: body.count || practiceProfile.settings.dailyCount,
+          planFile: dailyPlanFile,
+          settings,
+          fetch: assistFetch,
+        });
+        sendJson(response, 200, { plan, candidateCount: candidates.length });
+        return;
+      }
+
+      const dailyPlanActionMatch = requestUrl.pathname.match(/^\/api\/daily-plan\/items\/([^/]+)\/action$/);
+      if (request.method === "POST" && dailyPlanActionMatch) {
+        const slug = decodeURIComponent(dailyPlanActionMatch[1]);
+        const body = await readJsonBody(request);
+        const date = todayDate(body.date);
+        const action = String(body.action || "");
+        let plan = await updateDailyPlanItemAction({ planFile: dailyPlanFile, date, slug, action });
+        await updatePlannerAction(slug, action, plannerProfileFile);
+
+        if (action === "add_to_practice") {
+          const item = plan.items.find((entry) => entry.leetcodeSlug === slug);
+          if (item) {
+            await saveMemoryPage(memoryPageFromPlanItem(item), memoryFile, currentMemoryFile);
+          }
+        }
+
+        plan = await loadDailyPlan(date, dailyPlanFile);
+        sendJson(response, 200, { plan });
         return;
       }
 
