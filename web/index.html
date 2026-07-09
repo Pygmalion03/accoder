@@ -40,6 +40,44 @@
           <a id="leetcode-link" class="link-button" href="#" target="_blank" rel="noreferrer">LeetCode</a>
         </header>
 
+        <section id="daily-panel" class="daily-panel">
+          <div class="daily-head">
+            <div>
+              <p class="eyebrow">Daily Planner</p>
+              <h3>每日刷题</h3>
+            </div>
+            <div class="daily-actions">
+              <button id="import-catalog" type="button" class="secondary">导入推荐题库</button>
+              <input id="catalog-file" type="file" accept="application/json,.json" hidden />
+              <button id="generate-daily" type="button">生成今日计划</button>
+            </div>
+          </div>
+          <div class="daily-controls">
+            <label>
+              题量
+              <select id="daily-count">
+                <option value="3">3 道</option>
+                <option value="4">4 道</option>
+                <option value="5">5 道</option>
+              </select>
+            </label>
+            <label>
+              难度压力
+              <select id="daily-difficulty">
+                <option value="standard">标准</option>
+                <option value="conservative">稳扎稳打</option>
+                <option value="intensive">高强度</option>
+              </select>
+            </label>
+            <label>
+              目标标签
+              <input id="daily-tags" type="text" aria-label="目标标签，使用逗号分隔" placeholder="array, dp, graph" />
+            </label>
+          </div>
+          <p id="daily-status" class="daily-status">导入推荐题库后，可以生成今日刷题计划。</p>
+          <div id="daily-list" class="daily-list"></div>
+        </section>
+
         <div class="content-grid">
           <div class="left-stack">
             <section class="problem-panel">
