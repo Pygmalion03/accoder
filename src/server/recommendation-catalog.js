@@ -65,12 +65,16 @@ function normalizeFrequencyScore(frequencyScore) {
 }
 
 function normalizeSourceRank(sourceRank) {
-  const rank = Math.floor(Number(sourceRank ?? 0));
-  if (!Number.isFinite(rank)) {
-    return 0;
+  if (sourceRank === null || sourceRank === undefined || String(sourceRank).trim() === "") {
+    return Number.MAX_SAFE_INTEGER;
   }
 
-  return Math.max(0, rank);
+  const rank = Math.floor(Number(sourceRank));
+  if (!Number.isFinite(rank) || rank < 0) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  return rank;
 }
 
 function catalogSort(a, b) {
@@ -86,15 +90,17 @@ function entriesFromPayload(payload) {
     return payload;
   }
 
-  if (Array.isArray(payload?.entries)) {
-    return payload.entries;
+  if (payload && typeof payload === "object") {
+    if (Array.isArray(payload.entries)) {
+      return payload.entries;
+    }
+
+    if (Array.isArray(payload.problems)) {
+      return payload.problems;
+    }
   }
 
-  if (Array.isArray(payload?.problems)) {
-    return payload.problems;
-  }
-
-  return [];
+  throw new Error("Recommendation catalog import requires an entries array.");
 }
 
 export function normalizeCatalogEntry(entry, source = "", syncedAt = new Date().toISOString()) {
@@ -145,7 +151,7 @@ export async function importRecommendationCatalog(
 ) {
   const payloadSource = Array.isArray(payload) ? "" : payload?.source;
   const normalizedEntries = entriesFromPayload(payload).map((entry) =>
-    normalizeCatalogEntry(entry, entry?.source || payloadSource, importedAt),
+    normalizeCatalogEntry(entry, firstValue(entry?.source, payloadSource), importedAt),
   );
   const entriesBySlug = new Map();
 
