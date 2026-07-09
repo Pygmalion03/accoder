@@ -65,6 +65,18 @@ test("rejects recommendation entries without slug or LeetCode URL", async () => 
       ),
     /Missing recommendation slug/,
   );
+
+  await assert.rejects(
+    () =>
+      importRecommendationCatalog(
+        {
+          format: "acmcoder-recommendation-catalog-v1",
+          entries: [{ leetcodeSlug: "two-sum", title: "Two Sum" }],
+        },
+        catalogFile,
+      ),
+    /Missing LeetCode URL for recommendation: two-sum/,
+  );
 });
 
 test("returns an empty catalog when the catalog file does not exist", async () => {
