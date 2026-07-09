@@ -137,8 +137,10 @@ function normalizeCatalogEntry(entry) {
 
   return {
     leetcodeSlug,
+    slug: leetcodeSlug,
     title: normalizeText(entry?.title),
     leetcodeUrl,
+    url: leetcodeUrl,
     difficulty: normalizeDifficulty(entry?.difficulty),
     tags: normalizeTags(entry?.tags),
     frequencyScore: normalizeFrequencyScore(entry?.frequencyScore),

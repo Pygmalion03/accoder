@@ -208,3 +208,117 @@ test("uses source rank and slug for deterministic ties", () => {
     ["a-problem", "b-problem", "c-problem"],
   );
 });
+
+test("returns slug and url aliases without replacing canonical LeetCode fields", () => {
+  const [candidate] = generateCandidates({
+    catalogEntries: [catalog[0]],
+  });
+
+  assert.equal(candidate.leetcodeSlug, "two-sum");
+  assert.equal(candidate.slug, candidate.leetcodeSlug);
+  assert.equal(candidate.leetcodeUrl, "https://leetcode.cn/problems/two-sum/");
+  assert.equal(candidate.url, candidate.leetcodeUrl);
+});
+
+test("scores skipped candidates with a penalty and reason", () => {
+  const [candidate] = generateCandidates({
+    catalogEntries: [
+      {
+        leetcodeSlug: "skipped-problem",
+        title: "Skipped Problem",
+        leetcodeUrl: "https://leetcode.cn/problems/skipped-problem/",
+        difficulty: "unknown",
+        frequencyScore: 0,
+      },
+    ],
+    practiceProfile: {
+      items: {
+        "skipped-problem": { skippedAt: "2026-07-08T00:00:00.000Z" },
+      },
+    },
+    today: "2026-07-09T00:00:00.000Z",
+  });
+
+  assert.equal(candidate.score, 2);
+  assert.match(candidate.reasons.join(" "), /previously skipped/);
+});
+
+test("scores candidates outside cooldown as ready for revisit", () => {
+  const candidates = generateCandidates({
+    catalogEntries: [
+      {
+        leetcodeSlug: "baseline-accepted",
+        title: "Baseline Accepted",
+        leetcodeUrl: "https://leetcode.cn/problems/baseline-accepted/",
+        difficulty: "unknown",
+        frequencyScore: 0,
+      },
+      {
+        leetcodeSlug: "old-accepted",
+        title: "Old Accepted",
+        leetcodeUrl: "https://leetcode.cn/problems/old-accepted/",
+        difficulty: "unknown",
+        frequencyScore: 0,
+      },
+    ],
+    practiceProfile: {
+      settings: { cooldownDays: 3 },
+      items: {
+        "baseline-accepted": { acceptedCount: 1 },
+        "old-accepted": {
+          acceptedCount: 1,
+          lastPracticedAt: "2026-07-01T00:00:00.000Z",
+        },
+      },
+    },
+    today: "2026-07-09T00:00:00.000Z",
+  });
+  const baseline = candidates.find((candidate) => candidate.leetcodeSlug === "baseline-accepted");
+  const oldAccepted = candidates.find((candidate) => candidate.leetcodeSlug === "old-accepted");
+
+  assert.equal(oldAccepted.score - baseline.score, 12);
+  assert.match(oldAccepted.reasons.join(" "), /ready for revisit/);
+});
+
+test("scores revisit requests with a bonus and reason", () => {
+  const [candidate] = generateCandidates({
+    catalogEntries: [
+      {
+        leetcodeSlug: "revisit-problem",
+        title: "Revisit Problem",
+        leetcodeUrl: "https://leetcode.cn/problems/revisit-problem/",
+        difficulty: "unknown",
+        frequencyScore: 0,
+      },
+    ],
+    practiceProfile: {
+      items: {
+        "revisit-problem": { wantPracticeAgain: true },
+      },
+    },
+  });
+
+  assert.equal(candidate.score, 30);
+  assert.match(candidate.reasons.join(" "), /marked for revisit/);
+});
+
+test("penalizes accepted counts by exactly eight points each", () => {
+  const [candidate] = generateCandidates({
+    catalogEntries: [
+      {
+        leetcodeSlug: "accepted-twice",
+        title: "Accepted Twice",
+        leetcodeUrl: "https://leetcode.cn/problems/accepted-twice/",
+        difficulty: "unknown",
+        frequencyScore: 0,
+      },
+    ],
+    practiceProfile: {
+      items: {
+        "accepted-twice": { acceptedCount: 2 },
+      },
+    },
+  });
+
+  assert.equal(candidate.score, -16);
+});
