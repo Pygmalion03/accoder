@@ -4,5 +4,6 @@ node_modules/
 dist/
 coverage/
 data/memory/
+data/recommendation/
 .playwright-mcp/
 .worktrees/
