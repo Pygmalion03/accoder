@@ -172,6 +172,7 @@ test("web UI exposes lightweight optional model advice", () => {
 test("web UI exposes daily planner controls", () => {
   const html = fs.readFileSync("web/index.html", "utf8");
   const css = fs.readFileSync("web/styles.css", "utf8");
+  const script = fs.readFileSync("web/app.js", "utf8");
 
   assert.match(html, /id="daily-panel"/);
   assert.match(html, /id="daily-count"/);
@@ -183,6 +184,9 @@ test("web UI exposes daily planner controls", () => {
   assert.match(html, /id="daily-list"/);
   assert.match(css, /\.daily-panel/);
   assert.match(css, /\.daily-item/);
+  assert.match(script, /api\/daily-plan\/generate/);
+  assert.match(script, /api\/recommendation\/import/);
+  assert.match(script, /renderDailyPlan/);
 });
 
 test("web UI exposes problem selection, batch delete, and export controls", () => {

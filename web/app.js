@@ -6,6 +6,7 @@ const state = {
   selectedProblemIds: new Set(),
   environment: null,
   runnerUserConfigured: false,
+  dailyPlan: null,
 };
 
 const CACHE_KEYS = {
@@ -86,6 +87,14 @@ const elements = {
   assistQuestion: document.querySelector("#assist-question"),
   askAssist: document.querySelector("#ask-assist"),
   assistAnswer: document.querySelector("#assist-answer"),
+  dailyCount: document.querySelector("#daily-count"),
+  dailyDifficulty: document.querySelector("#daily-difficulty"),
+  dailyTags: document.querySelector("#daily-tags"),
+  generateDaily: document.querySelector("#generate-daily"),
+  importCatalog: document.querySelector("#import-catalog"),
+  catalogFile: document.querySelector("#catalog-file"),
+  dailyStatus: document.querySelector("#daily-status"),
+  dailyList: document.querySelector("#daily-list"),
 };
 
 const keywords = {
@@ -1001,6 +1010,127 @@ function readJsonFile(file) {
   });
 }
 
+function setDailyStatus(message, kind = "") {
+  elements.dailyStatus.textContent = message;
+  elements.dailyStatus.className = `daily-status ${kind}`.trim();
+}
+
+function dailyTagsFromInput() {
+  return elements.dailyTags.value
+    .split(/[,，]/)
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+function formatDailyMeta(item) {
+  return [
+    item.difficulty,
+    ...(Array.isArray(item.tags) ? item.tags : []),
+    item.estimatedMinutes ? `${item.estimatedMinutes} min` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function renderDailyPlan(plan) {
+  state.dailyPlan = plan;
+  elements.dailyList.innerHTML = "";
+
+  if (!plan?.items?.length) {
+    setDailyStatus("还没有今日计划。导入推荐题库后点击生成。");
+    return;
+  }
+
+  setDailyStatus(`${plan.theme} · ${plan.source === "ai" ? "AI 推荐" : "本地规则"}`);
+
+  for (const item of plan.items) {
+    const addedToPractice = Boolean(item.actions?.addedToPractice);
+    const mastered = Boolean(item.actions?.mastered);
+    const row = document.createElement("article");
+    row.className = "daily-item";
+    row.innerHTML = `
+      <div class="daily-item-head">
+        <div>
+          <h4>${escapeHtml(item.title || item.leetcodeSlug)}</h4>
+          <p class="daily-item-meta">${escapeHtml(formatDailyMeta(item))}</p>
+        </div>
+        <div class="daily-item-actions">
+          <a class="link-button" href="${escapeHtml(item.leetcodeUrl)}" target="_blank" rel="noreferrer" data-daily-action="open" data-slug="${escapeHtml(item.leetcodeSlug)}">LeetCode</a>
+          <button type="button" data-daily-action="add_to_practice" data-slug="${escapeHtml(item.leetcodeSlug)}" ${addedToPractice ? "disabled" : ""}>${addedToPractice ? "已加入" : "加入练习"}</button>
+          <button type="button" class="secondary" data-daily-action="skip" data-slug="${escapeHtml(item.leetcodeSlug)}">跳过</button>
+          <button type="button" class="secondary" data-daily-action="mastered" data-slug="${escapeHtml(item.leetcodeSlug)}" ${mastered ? "disabled" : ""}>${mastered ? "已掌握" : "标记掌握"}</button>
+        </div>
+      </div>
+      <p class="daily-item-reason">${escapeHtml(item.reason || item.focus || "")}</p>
+    `;
+    elements.dailyList.appendChild(row);
+  }
+}
+
+async function importRecommendationCatalog(file) {
+  if (!file) {
+    return;
+  }
+
+  const payload = await readJsonFile(file);
+  const body = await getJson("/api/recommendation/import", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  setDailyStatus(`已导入 ${body.importedCount || 0} 道推荐题。`, "ok");
+}
+
+async function loadTodayPlan() {
+  const body = await getJson("/api/daily-plan/today");
+  renderDailyPlan(body.plan);
+}
+
+async function generateDailyPlan() {
+  elements.generateDaily.disabled = true;
+  setDailyStatus("正在生成今日计划...");
+
+  try {
+    const body = await getJson("/api/daily-plan/generate", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        count: Number(elements.dailyCount.value),
+        difficultyPressure: elements.dailyDifficulty.value,
+        targetTags: dailyTagsFromInput(),
+      }),
+    });
+    renderDailyPlan(body.plan);
+  } catch (error) {
+    setDailyStatus(error.message, "error");
+  } finally {
+    elements.generateDaily.disabled = false;
+  }
+}
+
+async function recordDailyAction(slug, action) {
+  if (!slug || !action) {
+    return;
+  }
+
+  const body = await getJson(`/api/daily-plan/items/${encodeURIComponent(slug)}/action`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ action }),
+  });
+  renderDailyPlan(body.plan);
+  if (action === "add_to_practice") {
+    await reloadProblems();
+  }
+}
+
 async function reloadProblems() {
   const body = await getJson("/api/problems");
   state.problems = body.problems;
@@ -1151,6 +1281,30 @@ async function init() {
         elements.importFile.value = "";
       });
   });
+  elements.importCatalog.addEventListener("click", () => {
+    elements.catalogFile.click();
+  });
+  elements.catalogFile.addEventListener("change", () => {
+    importRecommendationCatalog(elements.catalogFile.files?.[0])
+      .catch((error) => {
+        setDailyStatus(error.message, "error");
+      })
+      .finally(() => {
+        elements.catalogFile.value = "";
+      });
+  });
+  elements.generateDaily.addEventListener("click", () => {
+    generateDailyPlan();
+  });
+  elements.dailyList.addEventListener("click", (event) => {
+    const target = event.target.closest("[data-daily-action]");
+    if (!target) {
+      return;
+    }
+    const slug = target.getAttribute("data-slug");
+    const action = target.getAttribute("data-daily-action");
+    recordDailyAction(slug, action).catch((error) => setDailyStatus(error.message, "error"));
+  });
   elements.language.addEventListener("change", async () => {
     localStorage.setItem(CACHE_KEYS.language, elements.language.value);
     applyRecommendedRunnerIfNeeded();
@@ -1191,6 +1345,9 @@ async function init() {
   elements.stdin.addEventListener("input", saveWorkspaceCache);
   elements.expected.addEventListener("input", saveWorkspaceCache);
   await loadMemoryHistory().catch(() => false);
+  await loadTodayPlan().catch(() => {
+    renderDailyPlan(null);
+  });
   renderProblemList();
   const cachedSelected = localStorage.getItem(CACHE_KEYS.selected);
   const fallback = state.problems.find((problem) => problem.slug === cachedSelected) || state.problems[0];
