@@ -188,6 +188,8 @@ The secondary inspector contains:
 
 The view does not show mistake analysis or AI review.
 
+Today's completed count is derived from existing progress data, not planner actions. A plan item counts as complete only when its matching library problem has `progress.lastAcceptedAt` on the plan's local calendar date. Opening, adding, skipping, or marking a problem mastered does not increment this progress bar.
+
 ### Practice
 
 Selecting an existing library problem switches to Practice. The Code Runner navigation item reopens the last selected library problem. A recommendation enters Practice only after the user chooses `Add and practice`; opening the original LeetCode page remains a separate action.
@@ -275,7 +277,8 @@ Key flows:
 4. Choose `Add and practice`, record `add_to_practice`, refresh the library, select the saved slug, and switch to `practice`.
 5. Select a library item and switch to `practice` without creating a daily-plan action.
 6. Run code through the unchanged runner request and reveal the result tab.
-7. Persist workspace input, code, language, runner, and selected problem through the existing cache behavior.
+7. When a run returns AC, update the matching problem progress and recompute today's completed count from `lastAcceptedAt`.
+8. Persist workspace input, code, language, runner, and selected problem through the existing cache behavior.
 
 Existing element IDs and request functions should be preserved where practical to reduce behavioral regression. Layout classes and container structure may change substantially.
 
