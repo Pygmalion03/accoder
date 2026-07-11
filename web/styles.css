@@ -1292,6 +1292,15 @@ textarea {
     margin-bottom: 26px;
   }
 
+  .catalog-view .view-heading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .catalog-view .heading-actions {
+    flex-wrap: wrap;
+  }
+
   .view-heading h1 {
     font-size: 28px;
   }

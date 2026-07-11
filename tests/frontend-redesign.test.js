@@ -239,6 +239,7 @@ test("visual system provides compact tablet and mobile navigation layouts", () =
 
   assert.match(css, /@media \(max-width:\s*1179px\)/);
   assert.match(css, /@media \(max-width:\s*759px\)/);
+  assert.match(css, /\.catalog-view \.view-heading\s*\{\s*flex-direction: column;/);
   assert.match(css, /\.mobile-nav/);
   assert.match(css, /\.mobile-practice-tabs/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);

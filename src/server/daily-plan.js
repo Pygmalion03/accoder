@@ -64,7 +64,7 @@ function planItemFromCandidate(candidate, overrides = {}) {
     difficulty: candidate.difficulty,
     tags: Array.isArray(candidate.tags) ? candidate.tags : [],
     focus: String(overrides.focus || candidate.tags?.[0] || candidate.difficulty || "practice"),
-    reason: String(overrides.reason || "Selected by deterministic fallback ranking."),
+    reason: String(overrides.reason || "根据题目频率和个人练习记录排序。"),
     estimatedMinutes: normalizeEstimatedMinutes(overrides.estimatedMinutes),
     actions: {
       ...emptyActions(),
@@ -103,7 +103,7 @@ export function validateAiPlan(rawPlan, candidates = [], date = new Date().toISO
     version: 1,
     date: normalizeDate(date),
     source: "ai",
-    theme: String(rawPlan.theme || "Daily interview practice").trim() || "Daily interview practice",
+    theme: String(rawPlan.theme || "每日面试题训练").trim() || "每日面试题训练",
     difficultyMix: difficultyMixFor(items),
     items,
   };
@@ -115,7 +115,7 @@ export function createFallbackPlan({ candidates = [], date = new Date().toISOStr
     version: 1,
     date: normalizeDate(date),
     source: "fallback",
-    theme: "High-frequency daily practice",
+    theme: "高频面试题训练",
     difficultyMix: difficultyMixFor(items),
     items,
   };
@@ -200,7 +200,7 @@ async function requestAiPlan({ settings = {}, fetch, candidates = [], count = 3,
         {
           role: "system",
           content:
-            "You are ACMCoder Daily Planner. Select only from the provided candidate slugs. Return strict JSON with theme and items. Do not invent problems.",
+            "You are ACMCoder Daily Planner. Select only from the provided candidate slugs. Return strict JSON with theme and items. Do not invent problems. theme, focus 和 reason 必须使用中文，表达简洁。",
         },
         {
           role: "user",

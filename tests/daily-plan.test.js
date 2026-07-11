@@ -87,6 +87,8 @@ test("creates a deterministic fallback plan from ranked candidates", () => {
   const plan = createFallbackPlan({ candidates, date: "2026-07-09", count: 2 });
 
   assert.equal(plan.source, "fallback");
+  assert.equal(plan.theme, "高频面试题训练");
+  assert.equal(plan.items[0].reason, "根据题目频率和个人练习记录排序。");
   assert.equal(plan.items.length, 2);
   assert.deepEqual(
     plan.items.map((item) => item.leetcodeSlug),
@@ -133,6 +135,8 @@ test("generates and stores an AI plan when the model returns valid JSON", async 
 
   assert.equal(plan.source, "ai");
   assert.equal(calls.length, 1);
+  const requestBody = JSON.parse(calls[0].options.body);
+  assert.match(requestBody.messages[0].content, /使用中文/);
   const stored = await loadDailyPlan("2026-07-09", planFile);
   assert.equal(stored.theme, "Hash table practice");
 });
