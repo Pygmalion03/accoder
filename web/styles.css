@@ -349,6 +349,16 @@ svg {
   white-space: nowrap;
 }
 
+.view-heading > div,
+.practice-identity {
+  min-width: 0;
+}
+
+.view-heading > .primary-action,
+.view-heading > .secondary-action {
+  flex: 0 0 auto;
+}
+
 .primary-action,
 .run-button {
   background: var(--ink);
@@ -1278,6 +1288,7 @@ textarea {
   .view-heading > .secondary-action {
     min-width: 38px;
     padding: 0 10px;
+    font-size: 11px;
   }
 
   .today-layout {

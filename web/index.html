@@ -65,7 +65,7 @@
               <h1 id="today-title">今天练什么</h1>
               <p id="daily-status" class="view-description" aria-live="polite">正在读取今日计划...</p>
             </div>
-            <button id="generate-daily" class="primary-action" type="button"><span data-icon="sparkles"></span>生成今日计划</button>
+            <button id="generate-daily" class="primary-action" type="button" aria-label="生成今日计划"><span data-icon="sparkles"></span>生成今日计划</button>
           </header>
 
           <div class="today-layout">
@@ -105,7 +105,7 @@
                 <label>目标标签
                   <input id="daily-tags" type="text" placeholder="array, dp, graph" aria-label="目标标签，使用逗号分隔" />
                 </label>
-                <button id="import-catalog" class="secondary-action" type="button"><span data-icon="upload"></span>导入推荐题库</button>
+                <button id="import-catalog" class="secondary-action" type="button" aria-label="导入推荐题库"><span data-icon="upload"></span>导入推荐题库</button>
                 <input id="catalog-file" type="file" accept="application/json,.json" hidden />
               </section>
             </aside>
@@ -123,7 +123,7 @@
               <button id="toggle-problem-inspector" class="command-button" type="button">题目</button>
               <label class="command-select"><span>语言</span><select id="language"><option value="python">Python</option><option value="java">Java</option><option value="cpp">C++17</option></select></label>
               <label class="command-select"><span>环境</span><select id="runner"><option value="local">本机</option><option value="docker">Docker</option></select></label>
-              <button id="run" class="run-button" type="button"><span data-icon="play"></span>运行</button>
+              <button id="run" class="run-button" type="button" aria-label="运行代码"><span data-icon="play"></span>运行</button>
             </div>
           </header>
 
@@ -183,7 +183,7 @@
         <section id="view-library" class="app-view library-view" data-view="library" tabindex="-1" hidden>
           <header class="view-heading">
             <div><p class="eyebrow-copy">LIBRARY</p><h1 id="library-title">我的题库</h1><p class="view-description">你导入或加入练习的题目，独立于推荐题库保存。</p></div>
-            <div class="heading-actions"><button id="import-problems" class="secondary-action" type="button"><span data-icon="upload"></span>导入</button><button id="export-problems" class="secondary-action" type="button"><span data-icon="download"></span>导出</button></div>
+            <div class="heading-actions"><button id="import-problems" class="secondary-action" type="button" aria-label="导入我的题库"><span data-icon="upload"></span>导入</button><button id="export-problems" class="secondary-action" type="button" aria-label="导出我的题库"><span data-icon="download"></span>导出</button></div>
           </header>
           <input id="import-file" type="file" accept="application/json,.json" hidden />
           <div class="library-toolbar">
@@ -197,7 +197,7 @@
         <section id="view-catalog" class="app-view catalog-view" data-view="catalog" tabindex="-1" hidden>
           <header class="view-heading">
             <div><p class="eyebrow-copy">CATALOG</p><h1 id="catalog-title">推荐题库</h1><p class="view-description">用于生成每日计划的只读高频题池。</p></div>
-            <button id="catalog-import" class="secondary-action" type="button"><span data-icon="upload"></span>导入题库</button>
+            <button id="catalog-import" class="secondary-action" type="button" aria-label="导入推荐题库"><span data-icon="upload"></span>导入题库</button>
           </header>
           <p id="catalog-status" class="catalog-status" aria-live="polite">正在读取推荐题库...</p>
           <div id="catalog-list" class="catalog-list"></div>
@@ -216,7 +216,7 @@
             <section class="settings-section" aria-labelledby="data-settings-heading">
               <div class="section-heading"><div><p class="section-kicker">LOCAL DATA</p><h2 id="data-settings-heading">本地数据</h2></div></div>
               <p>题目、代码缓存和练习进度均保存在当前项目的本地数据目录。</p>
-              <div class="settings-actions"><button id="settings-import-problems" class="secondary-action" type="button"><span data-icon="upload"></span>导入我的题库</button><button id="settings-export-problems" class="secondary-action" type="button"><span data-icon="download"></span>导出我的题库</button></div>
+              <div class="settings-actions"><button id="settings-import-problems" class="secondary-action" type="button" aria-label="导入我的题库"><span data-icon="upload"></span>导入我的题库</button><button id="settings-export-problems" class="secondary-action" type="button" aria-label="导出我的题库"><span data-icon="download"></span>导出我的题库</button></div>
             </section>
           </div>
         </section>
@@ -230,8 +230,8 @@
       <button id="mobile-more-toggle" type="button" aria-expanded="false"><span data-icon="settings"></span><span>更多</span></button>
     </nav>
     <div id="mobile-more-menu" class="mobile-more-menu" hidden>
-      <button type="button" data-view-target="catalog"><span data-icon="sparkles"></span>推荐题库</button>
-      <button type="button" data-view-target="settings"><span data-icon="settings"></span>设置</button>
+      <button type="button" data-view-target="catalog" aria-label="打开推荐题库"><span data-icon="sparkles"></span>推荐题库</button>
+      <button type="button" data-view-target="settings" aria-label="打开设置"><span data-icon="settings"></span>设置</button>
     </div>
 
     <script type="module" src="/app.js"></script>
