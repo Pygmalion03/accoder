@@ -148,3 +148,27 @@ test("local icon markup exposes the required Lucide icons", () => {
   }
   assert.equal(iconMarkup("missing"), "");
 });
+
+test("web app wires the five-view workspace and utility tabs", () => {
+  const script = fs.readFileSync("web/app.js", "utf8");
+
+  assert.match(script, /import \{ hydrateIcons \} from "\.\/icons\.js"/);
+  assert.match(script, /import \{[\s\S]*normalizeUtilityTab[\s\S]*normalizeView[\s\S]*\} from "\.\/view-state\.js"/);
+  assert.match(script, /activeView:\s*"today"/);
+  assert.match(script, /activeUtilityTab:\s*"test"/);
+  assert.match(script, /function setActiveView\(/);
+  assert.match(script, /function setUtilityTab\(/);
+  assert.match(script, /function setMobileMoreOpen\(/);
+  assert.match(script, /function updateLibraryCount\(/);
+});
+
+test("web app keeps catalog and settings actions connected to existing local flows", () => {
+  const script = fs.readFileSync("web/app.js", "utf8");
+
+  assert.match(script, /settingsImportProblems/);
+  assert.match(script, /settingsExportProblems/);
+  assert.match(script, /catalogImport/);
+  assert.match(script, /globalSearch/);
+  assert.match(script, /api\/recommendation\/catalog/);
+  assert.match(script, /reloadProblems\(\{ preserveView = false \} = \{\}\)/);
+});

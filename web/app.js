@@ -1,3 +1,6 @@
+import { hydrateIcons } from "./icons.js";
+import { normalizeUtilityTab, normalizeView } from "./view-state.js";
+
 const state = {
   problems: [],
   selected: null,
@@ -7,6 +10,12 @@ const state = {
   environment: null,
   runnerUserConfigured: false,
   dailyPlan: null,
+  catalog: [],
+  activeView: "today",
+  activeUtilityTab: "test",
+  mobilePracticeTab: "code",
+  problemInspectorOpen: false,
+  mobileMoreOpen: false,
 };
 
 const CACHE_KEYS = {
@@ -52,6 +61,18 @@ int main() {
 };
 
 const elements = {
+  appViews: [...document.querySelectorAll("[data-view]")],
+  viewTargets: [...document.querySelectorAll("[data-view-target]")],
+  utilityTabs: [...document.querySelectorAll("[data-utility-tab]")],
+  utilityPanels: [...document.querySelectorAll("[data-utility-panel]")],
+  mobilePracticeTabs: [...document.querySelectorAll("[data-mobile-practice-tab]")],
+  mobilePracticePanels: [...document.querySelectorAll("[data-mobile-practice-panel]")],
+  mobileMoreToggle: document.querySelector("#mobile-more-toggle"),
+  mobileMoreMenu: document.querySelector("#mobile-more-menu"),
+  globalSearch: document.querySelector("#global-search"),
+  currentDate: document.querySelector("#current-date"),
+  libraryCount: document.querySelector("#library-count"),
+  navRunnerHealth: document.querySelector("#nav-runner-health"),
   search: document.querySelector("#search"),
   list: document.querySelector("#problem-list"),
   selectProblems: document.querySelector("#select-problems"),
@@ -95,6 +116,17 @@ const elements = {
   catalogFile: document.querySelector("#catalog-file"),
   dailyStatus: document.querySelector("#daily-status"),
   dailyList: document.querySelector("#daily-list"),
+  catalogImport: document.querySelector("#catalog-import"),
+  catalogStatus: document.querySelector("#catalog-status"),
+  catalogList: document.querySelector("#catalog-list"),
+  settingsImportProblems: document.querySelector("#settings-import-problems"),
+  settingsExportProblems: document.querySelector("#settings-export-problems"),
+  dailyPlanSource: document.querySelector("#daily-plan-source"),
+  dailyProgressCount: document.querySelector("#daily-progress-count"),
+  dailyProgressBar: document.querySelector("#daily-progress-bar"),
+  dailySession: document.querySelector("#daily-session"),
+  problemInspector: document.querySelector("#problem-inspector"),
+  toggleProblemInspector: document.querySelector("#toggle-problem-inspector"),
 };
 
 const keywords = {
@@ -233,6 +265,8 @@ function runnerLabel(runner) {
 function setRunnerHealth(message, kind = "") {
   elements.runnerHealth.textContent = message;
   elements.runnerHealth.className = `runner-health ${kind}`.trim();
+  elements.navRunnerHealth.textContent = message;
+  elements.navRunnerHealth.className = `nav-health ${kind}`.trim();
 }
 
 function updateRunnerModeOptions() {
@@ -928,6 +962,9 @@ async function selectProblem(slug, options = {}) {
   restoreWorkspaceCache();
   saveWorkspaceCache();
   renderProblemList();
+  if (options.openView !== false) {
+    setActiveView("practice");
+  }
 }
 
 function setResult(result) {
@@ -1010,6 +1047,53 @@ function readJsonFile(file) {
   });
 }
 
+function setMobileMoreOpen(open) {
+  state.mobileMoreOpen = Boolean(open);
+  elements.mobileMoreMenu.hidden = !state.mobileMoreOpen;
+  elements.mobileMoreToggle.setAttribute("aria-expanded", String(state.mobileMoreOpen));
+}
+
+function setActiveView(value, { focus = false } = {}) {
+  const view = normalizeView(value);
+  state.activeView = view;
+  document.body.dataset.activeView = view;
+
+  for (const panel of elements.appViews) {
+    const active = panel.dataset.view === view;
+    panel.hidden = !active;
+    panel.classList.toggle("is-active", active);
+    if (active && focus) panel.focus({ preventScroll: true });
+  }
+
+  for (const target of elements.viewTargets) {
+    const active = target.dataset.viewTarget === view;
+    target.classList.toggle("is-active", active);
+    if (target.closest("#app-navigation, #mobile-navigation")) {
+      if (active) target.setAttribute("aria-current", "page");
+      else target.removeAttribute("aria-current");
+    }
+  }
+
+  setMobileMoreOpen(false);
+}
+
+function setUtilityTab(value) {
+  const tab = normalizeUtilityTab(value);
+  state.activeUtilityTab = tab;
+  for (const button of elements.utilityTabs) {
+    const active = button.dataset.utilityTab === tab;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", String(active));
+  }
+  for (const panel of elements.utilityPanels) {
+    panel.hidden = panel.dataset.utilityPanel !== tab;
+  }
+}
+
+function updateLibraryCount() {
+  elements.libraryCount.textContent = String(state.problems.length);
+}
+
 function setDailyStatus(message, kind = "") {
   elements.dailyStatus.textContent = message;
   elements.dailyStatus.className = `daily-status ${kind}`.trim();
@@ -1082,6 +1166,29 @@ async function importRecommendationCatalog(file) {
   });
 
   setDailyStatus(`已导入 ${body.importedCount || 0} 道推荐题。`, "ok");
+  await loadRecommendationCatalog();
+}
+
+function renderRecommendationCatalog() {
+  elements.catalogList.innerHTML = "";
+  if (state.catalog.length === 0) {
+    elements.catalogStatus.textContent = "推荐题库为空，请先导入题库文件。";
+    return;
+  }
+
+  elements.catalogStatus.textContent = `共 ${state.catalog.length} 道高频题，仅作为每日推荐来源。`;
+  for (const item of state.catalog) {
+    const row = document.createElement("article");
+    row.className = "catalog-item";
+    row.innerHTML = `<strong>${escapeHtml(item.title || item.leetcodeSlug || item.slug)}</strong>`;
+    elements.catalogList.appendChild(row);
+  }
+}
+
+async function loadRecommendationCatalog() {
+  const body = await getJson("/api/recommendation/catalog");
+  state.catalog = Array.isArray(body.catalog?.entries) ? body.catalog.entries : [];
+  renderRecommendationCatalog();
 }
 
 async function loadTodayPlan() {
@@ -1131,16 +1238,17 @@ async function recordDailyAction(slug, action) {
   }
 }
 
-async function reloadProblems() {
+async function reloadProblems({ preserveView = false } = {}) {
   const body = await getJson("/api/problems");
   state.problems = body.problems;
   await loadMemoryHistory().catch(() => false);
   renderProblemList();
+  updateLibraryCount();
 
   if (!state.selected || !state.problems.some((problem) => problem.slug === state.selected.slug)) {
     const fallback = state.problems[0];
     if (fallback) {
-      await selectProblem(fallback.slug);
+      await selectProblem(fallback.slug, { openView: !preserveView });
     }
   }
 }
@@ -1241,8 +1349,18 @@ async function loadCurrentMemory({ autoSelect = false } = {}) {
 }
 
 async function init() {
+  hydrateIcons();
+  elements.currentDate.textContent = new Intl.DateTimeFormat("zh-CN", {
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  }).format(new Date());
+  setActiveView("today");
+  setUtilityTab("test");
+
   const body = await getJson("/api/problems");
   state.problems = body.problems;
+  updateLibraryCount();
   elements.language.value = localStorage.getItem(CACHE_KEYS.language) || elements.language.value;
   const savedRunner = localStorage.getItem(CACHE_KEYS.runner);
   state.runnerUserConfigured = Boolean(savedRunner);
@@ -1250,6 +1368,17 @@ async function init() {
   await loadDoctor({ applyDefault: true });
   await loadAssistSettings().catch((error) => {
     setAssistAnswer(`模型设置读取失败：${error.message}`, "error");
+  });
+  for (const target of elements.viewTargets) {
+    target.addEventListener("click", () => setActiveView(target.dataset.viewTarget, { focus: true }));
+  }
+  for (const tab of elements.utilityTabs) {
+    tab.addEventListener("click", () => setUtilityTab(tab.dataset.utilityTab));
+  }
+  elements.mobileMoreToggle.addEventListener("click", () => setMobileMoreOpen(!state.mobileMoreOpen));
+  elements.globalSearch.addEventListener("click", () => {
+    setActiveView("library");
+    elements.search.focus();
   });
   elements.search.addEventListener("input", renderProblemList);
   elements.selectProblems.addEventListener("click", () => {
@@ -1272,6 +1401,12 @@ async function init() {
   elements.importProblems.addEventListener("click", () => {
     elements.importFile.click();
   });
+  elements.settingsImportProblems.addEventListener("click", () => elements.importFile.click());
+  elements.settingsExportProblems.addEventListener("click", () => {
+    exportProblems().catch((error) => {
+      setResult({ status: "ERROR", message: error.message, stdout: "", stderr: "" });
+    });
+  });
   elements.importFile.addEventListener("change", () => {
     importProblems(elements.importFile.files?.[0])
       .catch((error) => {
@@ -1284,6 +1419,7 @@ async function init() {
   elements.importCatalog.addEventListener("click", () => {
     elements.catalogFile.click();
   });
+  elements.catalogImport.addEventListener("click", () => elements.catalogFile.click());
   elements.catalogFile.addEventListener("change", () => {
     importRecommendationCatalog(elements.catalogFile.files?.[0])
       .catch((error) => {
@@ -1348,16 +1484,21 @@ async function init() {
   await loadTodayPlan().catch(() => {
     renderDailyPlan(null);
   });
+  await loadRecommendationCatalog().catch((error) => {
+    elements.catalogStatus.textContent = `推荐题库读取失败：${error.message}`;
+  });
   renderProblemList();
+  updateLibraryCount();
   const cachedSelected = localStorage.getItem(CACHE_KEYS.selected);
   const fallback = state.problems.find((problem) => problem.slug === cachedSelected) || state.problems[0];
   if (fallback) {
-    await selectProblem(fallback.slug);
+    await selectProblem(fallback.slug, { openView: false });
   }
   await loadCurrentMemory({ autoSelect: true }).catch(() => false);
   setInterval(() => {
     loadCurrentMemory({ autoSelect: true }).catch(() => {});
   }, 2000);
+  setActiveView("today");
 }
 
 init().catch((error) => {
