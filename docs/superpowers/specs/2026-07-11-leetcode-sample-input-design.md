@@ -8,7 +8,7 @@ LeetCode examples use core-function notation such as `nums = [2,7,11,15], target
 
 - Keep the original LeetCode example in the full problem statement.
 - Do not automatically load a sample from a LeetCode memory page into executable `stdin` or expected output.
-- Leave both test fields empty for a new LeetCode memory workspace and when its sample-load button is pressed.
+- Leave both test fields empty for a new LeetCode memory workspace, label its sample as reference-only, and disable the sample-load button.
 - Show a short message explaining that the example is not ACM standard input and must be entered according to the program's read order.
 - Preserve manually edited workspace input. If an old workspace cache exactly matches the stored LeetCode example, treat it as stale automatic input and clear it once.
 - Preserve existing automatic sample loading for seed problems and any problem with explicit ACM test cases.

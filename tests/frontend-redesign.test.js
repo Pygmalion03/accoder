@@ -7,9 +7,11 @@ import {
   UTILITY_TABS,
   canonicalProblemSlug,
   dailyPlanProgress,
+  isStaleLeetCodeSampleCache,
   nextCatalogSelection,
   normalizeUtilityTab,
   normalizeView,
+  sampleIoForProblem,
 } from "../web/view-state.js";
 import { iconMarkup } from "../web/icons.js";
 
@@ -64,6 +66,54 @@ test("toggles select all for recommendation catalog entries", () => {
   assert.deepEqual(nextCatalogSelection([], new Set()), []);
 });
 
+test("does not treat a captured LeetCode example as executable ACM input", () => {
+  const problem = {
+    memorySource: true,
+    sample: { inputText: "nums = [2,7,11,15], target = 9", outputText: "[0,1]" },
+  };
+
+  assert.deepEqual(sampleIoForProblem(problem), {
+    inputText: "",
+    outputText: "",
+    note: "LeetCode 示例不是 ACM 标准输入，请按程序的读取顺序填写测试数据。",
+  });
+});
+
+test("restores the first ACM case for a seed problem", () => {
+  const problem = {
+    source: "seed",
+    cases: [{ inputText: "4\n2 7 11 15\n9", outputText: "0 1" }],
+  };
+
+  assert.deepEqual(sampleIoForProblem(problem), {
+    inputText: "4\n2 7 11 15\n9",
+    outputText: "0 1",
+    note: "",
+  });
+});
+
+test("only discards an old cache that exactly matches the LeetCode example", () => {
+  const problem = {
+    memorySource: true,
+    sample: { inputText: "nums = [2,7,11,15], target = 9", outputText: "[0,1]" },
+  };
+
+  assert.equal(
+    isStaleLeetCodeSampleCache(problem, {
+      stdin: "nums = [2,7,11,15], target = 9",
+      expected: "[0,1]",
+    }),
+    true,
+  );
+  assert.equal(
+    isStaleLeetCodeSampleCache(problem, {
+      stdin: "4\n2 7 11 15\n9",
+      expected: "0 1",
+    }),
+    false,
+  );
+});
+
 test("web UI has no runtime CDN or font URL dependencies", () => {
   const html = fs.readFileSync("web/index.html", "utf8");
 
@@ -111,6 +161,7 @@ test("web UI preserves each behavior-bearing element ID exactly once", () => {
     "stdin",
     "expected",
     "sample-io",
+    "sample-io-note",
     "clear-expected",
     "status",
     "message",

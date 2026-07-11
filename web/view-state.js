@@ -22,6 +22,41 @@ export function nextCatalogSelection(catalog = [], selectedSlugs = new Set()) {
   return allSelected ? [] : slugs;
 }
 
+export function sampleIoForProblem(problem) {
+  if (problem?.memorySource) {
+    return {
+      inputText: "",
+      outputText: "",
+      note: "LeetCode 示例不是 ACM 标准输入，请按程序的读取顺序填写测试数据。",
+    };
+  }
+
+  const sample = problem?.sample;
+  if (sample && (typeof sample.inputText === "string" || typeof sample.outputText === "string")) {
+    return {
+      inputText: sample.inputText || "",
+      outputText: sample.outputText || "",
+      note: "",
+    };
+  }
+
+  const firstCase = problem?.cases?.[0];
+  return {
+    inputText: firstCase?.inputText || "",
+    outputText: firstCase?.outputText || "",
+    note: "",
+  };
+}
+
+export function isStaleLeetCodeSampleCache(problem, workspace) {
+  const sample = problem?.sample;
+  if (!problem?.memorySource || !sample || !workspace) {
+    return false;
+  }
+
+  return workspace.stdin === (sample.inputText || "") && workspace.expected === (sample.outputText || "");
+}
+
 export function localDateForTimestamp(value) {
   if (value === null || value === undefined || (typeof value === "string" && value.trim() === "")) {
     return "";

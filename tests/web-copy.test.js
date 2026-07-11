@@ -43,14 +43,26 @@ test("web app loads memory history without replacing active selection", () => {
   assert.match(script, /shouldSelectNewMemory/);
 });
 
-test("web app preserves captured metadata and sample IO for memory problems", () => {
+test("web app preserves captured metadata and checks sample IO before loading it", () => {
   const script = fs.readFileSync("web/app.js", "utf8");
 
   assert.match(script, /frontendId:\s*page\.frontendId/);
   assert.match(script, /page\.difficulty/);
   assert.match(script, /Array\.isArray\(page\.tags\)/);
   assert.match(script, /sample:\s*page\.sample/);
-  assert.match(script, /state\.selected\?\.sample/);
+  assert.match(script, /sampleIoForProblem\(state\.selected\)/);
+});
+
+test("web UI explains why LeetCode examples are not loaded as ACM input", () => {
+  const html = fs.readFileSync("web/index.html", "utf8");
+  const css = fs.readFileSync("web/styles.css", "utf8");
+  const script = fs.readFileSync("web/app.js", "utf8");
+
+  assert.match(html, /id="sample-io-note"[^>]*aria-live="polite"/);
+  assert.match(css, /\.io-note/);
+  assert.match(script, /sampleIoForProblem/);
+  assert.match(script, /isStaleLeetCodeSampleCache/);
+  assert.match(script, /sampleIoNote:\s*document\.querySelector\("#sample-io-note"\)/);
 });
 
 test("web app renders the title eyebrow from id difficulty and tags", () => {

@@ -905,6 +905,17 @@ textarea {
   margin-bottom: 14px;
 }
 
+.io-note {
+  margin: -5px 0 13px;
+  color: #aebcb7;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.io-note:empty {
+  display: none;
+}
+
 .io-actions button,
 .assist-actions button {
   min-height: 30px;

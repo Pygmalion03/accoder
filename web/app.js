@@ -2,9 +2,11 @@ import { hydrateIcons, iconMarkup } from "./icons.js";
 import {
   canonicalProblemSlug,
   dailyPlanProgress,
+  isStaleLeetCodeSampleCache,
   nextCatalogSelection,
   normalizeUtilityTab,
   normalizeView,
+  sampleIoForProblem,
 } from "./view-state.js";
 
 const state = {
@@ -104,6 +106,7 @@ const elements = {
   stdin: document.querySelector("#stdin"),
   expected: document.querySelector("#expected"),
   sampleIo: document.querySelector("#sample-io"),
+  sampleIoNote: document.querySelector("#sample-io-note"),
   clearExpected: document.querySelector("#clear-expected"),
   status: document.querySelector("#status"),
   message: document.querySelector("#message"),
@@ -841,16 +844,12 @@ async function loadTemplate(options = {}) {
 }
 
 function restoreSampleIo() {
-  const sample = state.selected?.sample;
-  if (sample && (typeof sample.inputText === "string" || typeof sample.outputText === "string")) {
-    elements.stdin.value = sample.inputText || "";
-    elements.expected.value = sample.outputText || "";
-    return;
-  }
-
-  const firstCase = state.selected?.cases?.[0];
-  elements.stdin.value = firstCase?.inputText || "";
-  elements.expected.value = firstCase?.outputText || "";
+  const sampleIo = sampleIoForProblem(state.selected);
+  elements.stdin.value = sampleIo.inputText;
+  elements.expected.value = sampleIo.outputText;
+  elements.sampleIoNote.textContent = sampleIo.note;
+  elements.sampleIo.disabled = Boolean(sampleIo.note);
+  elements.sampleIo.textContent = sampleIo.note ? "样例仅供参考" : "载入题目样例";
 }
 
 function normalizeDifficulty(value) {
@@ -971,7 +970,16 @@ async function selectProblem(slug, options = {}) {
   if (options.loadTemplate !== false) {
     await loadTemplate({ persist: false });
   }
-  restoreWorkspaceCache();
+  const restoredWorkspace = restoreWorkspaceCache();
+  if (
+    restoredWorkspace &&
+    isStaleLeetCodeSampleCache(state.selected, {
+      stdin: elements.stdin.value,
+      expected: elements.expected.value,
+    })
+  ) {
+    restoreSampleIo();
+  }
   saveWorkspaceCache();
   renderProblemList();
   renderDailySession();
