@@ -209,8 +209,22 @@ function currentToolchainStatus() {
   return environment?.local?.[elements.language.value] || null;
 }
 
+function apiRunnerForUiMode(mode) {
+  return mode === "docker" ? "docker" : "local";
+}
+
+function uiRunnerForApiRecommendation(recommendation) {
+  if (recommendation === "docker") {
+    return "docker";
+  }
+  if (recommendation === "local") {
+    return isDockerAppDeployment() ? "builtin" : "local";
+  }
+  return "";
+}
+
 function currentRunnerRecommendation() {
-  return environment?.recommendedRunnerByLanguage?.[elements.language.value] || "";
+  return uiRunnerForApiRecommendation(environment?.recommendedRunnerByLanguage?.[elements.language.value] || "");
 }
 
 function isDockerAppDeployment() {
@@ -218,26 +232,38 @@ function isDockerAppDeployment() {
 }
 
 function runnerLabel(runner) {
+  if (runner === "builtin") {
+    return "内置环境";
+  }
   if (runner === "docker") {
     return "Docker runner";
   }
-  return environment?.deployment?.localRunnerLabel || "本机环境";
+  return "本机环境";
 }
 
 function updateRunnerModeOptions() {
   const localOption = elements.runner.querySelector('option[value="local"]');
+  const builtinOption = elements.runner.querySelector('option[value="builtin"]');
   const dockerOption = elements.runner.querySelector('option[value="docker"]');
   const dockerApp = isDockerAppDeployment();
+  const localReady = Boolean(currentToolchainStatus()?.ready);
 
   if (localOption) {
-    localOption.textContent = runnerLabel("local");
+    localOption.disabled = dockerApp || !localReady;
+  }
+  if (builtinOption) {
+    builtinOption.disabled = !dockerApp || !localReady;
   }
   if (dockerOption) {
-    dockerOption.textContent = "Docker runner";
-    dockerOption.disabled = dockerApp;
+    dockerOption.disabled = dockerApp || !environment?.docker?.ready;
   }
-  if (dockerApp && elements.runner.value === "docker") {
-    elements.runner.value = "local";
+
+  const currentOption = elements.runner.selectedOptions[0];
+  if (!currentOption || currentOption.disabled) {
+    const recommended = currentRunnerRecommendation();
+    const recommendedOption = elements.runner.querySelector(`option[value="${recommended}"]`);
+    const fallback = [...elements.runner.options].find((option) => !option.disabled);
+    elements.runner.value = recommendedOption && !recommendedOption.disabled ? recommended : fallback?.value || "";
   }
 }
 
@@ -253,7 +279,7 @@ function renderRunnerHealth() {
   const recommendation = currentRunnerRecommendation();
   const suffix = recommendation && recommendation !== runner ? ` 推荐：${runnerLabel(recommendation)}。` : "";
 
-  if (isDockerAppDeployment()) {
+  if (runner === "builtin") {
     const message = local?.ready
       ? `当前本地服务运行在 Docker app 容器中，${local.label} 已由内置环境提供；请使用“内置环境”运行代码。`
       : `当前本地服务运行在 Docker app 容器中，但内置环境缺少 ${local?.label || "当前语言"}。`;
@@ -707,7 +733,7 @@ async function runCode() {
   elements.runCode.disabled = true;
   setRunResult({
     status: "RUNNING",
-    message: `Running ${elements.runner.value} runner...`,
+    message: `Running ${runnerLabel(elements.runner.value)}...`,
     stdout: "",
     stderr: "",
   });
@@ -722,7 +748,7 @@ async function runCode() {
       body: JSON.stringify({
         slug: capturedPage?.slug || "scratch",
         language: elements.language.value,
-        runner: elements.runner.value,
+        runner: apiRunnerForUiMode(elements.runner.value),
         code: elements.code.value,
         stdin: elements.stdin.value,
         expected: elements.expected.value,
@@ -958,6 +984,7 @@ function handleEditorBeforeInput(event) {
 async function handleLanguageChange() {
   const stdin = elements.stdin.value;
   const expected = elements.expected.value;
+  updateRunnerModeOptions();
   applyRecommendedRunnerIfNeeded();
   renderRunnerHealth();
   await saveSettings({ includeRunner: runnerUserConfigured });

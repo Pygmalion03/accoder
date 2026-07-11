@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import {
   APP_VIEWS,
   UTILITY_TABS,
+  apiRunnerForUiMode,
   canonicalProblemSlug,
   dailyPlanProgress,
   isStaleLeetCodeSampleCache,
@@ -12,6 +13,7 @@ import {
   normalizeUtilityTab,
   normalizeView,
   sampleIoForProblem,
+  uiRunnerForApiRecommendation,
 } from "../web/view-state.js";
 import { iconMarkup } from "../web/icons.js";
 
@@ -22,6 +24,15 @@ test("defines and normalizes application views and utility tabs", () => {
   assert.equal(normalizeView("unknown"), "today");
   assert.equal(normalizeUtilityTab("assist"), "assist");
   assert.equal(normalizeUtilityTab("unknown"), "test");
+});
+
+test("maps the three visible runner modes to the existing runner API", () => {
+  assert.equal(apiRunnerForUiMode("local"), "local");
+  assert.equal(apiRunnerForUiMode("builtin"), "local");
+  assert.equal(apiRunnerForUiMode("docker"), "docker");
+  assert.equal(uiRunnerForApiRecommendation("local", "host"), "local");
+  assert.equal(uiRunnerForApiRecommendation("local", "docker-app"), "builtin");
+  assert.equal(uiRunnerForApiRecommendation("docker", "host"), "docker");
 });
 
 test("canonicalizes problem slugs and prefers LeetCode metadata", () => {

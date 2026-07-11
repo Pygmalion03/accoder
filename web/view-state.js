@@ -9,6 +9,20 @@ export function normalizeUtilityTab(value) {
   return UTILITY_TABS.includes(value) ? value : "test";
 }
 
+export function apiRunnerForUiMode(mode) {
+  return mode === "docker" ? "docker" : "local";
+}
+
+export function uiRunnerForApiRecommendation(recommendation, deploymentMode) {
+  if (recommendation === "docker") {
+    return "docker";
+  }
+  if (recommendation === "local") {
+    return deploymentMode === "docker-app" ? "builtin" : "local";
+  }
+  return "";
+}
+
 export function canonicalProblemSlug(problem) {
   const slug = problem?.leetcode?.slug ?? problem?.slug ?? "";
   return typeof slug === "string" ? slug.replace(/^memory:/, "") : "";

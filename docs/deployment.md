@@ -44,7 +44,7 @@ docker compose -f docker-compose.prebuilt.yml up -d
 http://127.0.0.1:43117
 ```
 
-这条路不要求用户本机安装 Node.js、Java、C++ 或 Python。容器里的内置环境已经带了 `python3`、`g++`、`openjdk`，所以页面里选择 `内置环境` 就能运行代码。它不是 Docker runner，而是 app 容器本身的编译运行环境。记忆题目、AC 次数、模型设置会通过 `./data/memory:/app/data/memory` 持久化到宿主机。
+这条路不要求用户本机安装 Node.js、Java、C++ 或 Python。容器里的内置环境已经带了 `python3`、`g++`、`openjdk`，所以页面里选择 `内置环境` 就能运行代码。它不是 Docker runner，而是 app 容器本身的编译运行环境。Compose 会把启动目录中的 `./data` 挂载到 `/app/data`，因此记忆题目、推荐题库、每日计划、AC 次数和模型设置与同一份源码目录下的本机服务共用。
 
 这条路径会创建 Docker 镜像、容器和 Compose 网络，但不会修改用户 Docker Desktop 的全局配置，也不会往宿主机安装 Java/C++/Python。
 
@@ -78,7 +78,7 @@ ghcr.io/pygmalion03/acmcoder-app:latest
 | 源码 + Docker runner | 宿主机 Node.js | Docker runner 镜像 | 有 Node.js，但不想装编译环境 |
 | Docker app 镜像 | Docker app 容器 | Docker app 容器 | 只有 Docker 的普通用户 |
 
-Docker app 模式下页面会禁用 `Docker runner`。如果用户已经通过 Docker app 进入页面，再选 Docker runner 就变成“容器里的 Web 服务继续调用另一个 Docker runner 容器”，当前部署不提供这条链路，也没有必要。
+页面和插件始终列出 `本机环境`、`内置环境` 和 `Docker runner` 三种名称，并禁用当前部署无法使用的选项。Docker app 模式只启用 `内置环境`；本机服务按工具链和 Docker 状态启用 `本机环境` 与 `Docker runner`。如果用户已经通过 Docker app 进入页面，再选 Docker runner 就变成“容器里的 Web 服务继续调用另一个 Docker runner 容器”，当前部署不提供这条链路。
 
 本地 Web 想直接使用预构建 runner 时，可以设置：
 

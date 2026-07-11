@@ -121,16 +121,17 @@ test("web editor keeps caret aligned by disabling soft wrapping", () => {
   assert.match(script, /addEventListener\("keyup", syncHighlight\)/);
 });
 
-test("web UI exposes local and docker runner modes", () => {
+test("web UI exposes host, built-in, and Docker runner modes", () => {
   const html = fs.readFileSync("web/index.html", "utf8");
   const script = fs.readFileSync("web/app.js", "utf8");
   const css = fs.readFileSync("web/styles.css", "utf8");
 
   assert.match(html, /id="runner"/);
-  assert.match(html, /value="local"/);
-  assert.match(html, /value="docker"/);
+  assert.match(html, /<option value="local">本机环境<\/option>/);
+  assert.match(html, /<option value="builtin">内置环境<\/option>/);
+  assert.match(html, /<option value="docker">Docker runner<\/option>/);
   assert.match(script, /runner:\s*document\.querySelector\("#runner"\)/);
-  assert.match(script, /runner:\s*elements\.runner\.value/);
+  assert.match(script, /runner:\s*apiRunnerForUiMode\(elements\.runner\.value\)/);
   assert.match(script, /acmcoder\.web\.runner/);
   assert.match(css, /\.status\.NO_RUNNER/);
 });
@@ -155,6 +156,8 @@ test("web UI explains Docker app uses its built-in environment", () => {
   assert.match(script, /deployment\?\.mode === "docker-app"/);
   assert.match(script, /当前运行在 Docker app 容器中/);
   assert.match(script, /内置环境/);
+  assert.match(script, /builtinOption\.disabled/);
+  assert.match(script, /localOption\.disabled/);
   assert.match(script, /dockerOption\.disabled/);
 });
 

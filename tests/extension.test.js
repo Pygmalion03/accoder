@@ -89,15 +89,16 @@ test("sidebar can run code through the local runner", () => {
 
   assert.match(html, /id="runner"/);
   assert.match(html, /id="ac-count"/);
-  assert.match(html, /value="local"/);
-  assert.match(html, /value="docker"/);
+  assert.match(html, /<option value="local">本机环境<\/option>/);
+  assert.match(html, /<option value="builtin">内置环境<\/option>/);
+  assert.match(html, /<option value="docker">Docker runner<\/option>/);
   assert.match(script, /runCode/);
   assert.match(script, /api\/run/);
   assert.match(script, /sidebarWorkspaceKey/);
   assert.match(script, /runner:\s*"acmcoder\.sidebar\.runner"/);
   assert.match(script, /runner:\s*document\.querySelector\("#runner"\)/);
-  assert.match(script, /runner:\s*elements\.runner\.value/);
-  assert.match(script, /Running \$\{elements\.runner\.value\} runner/);
+  assert.match(script, /runner:\s*apiRunnerForUiMode\(elements\.runner\.value\)/);
+  assert.match(script, /Running \$\{runnerLabel\(elements\.runner\.value\)\}/);
   assert.match(script, /body\.progress/);
   assert.match(script, /renderProgress/);
   assert.match(css, /\.ac-count/);
@@ -123,6 +124,8 @@ test("sidebar explains Docker app uses its built-in environment", () => {
 
   assert.match(script, /deployment\?\.mode === "docker-app"/);
   assert.match(script, /当前本地服务运行在 Docker app 容器中/);
+  assert.match(script, /builtinOption\.disabled/);
+  assert.match(script, /localOption\.disabled/);
   assert.match(script, /dockerOption\.disabled/);
 });
 
