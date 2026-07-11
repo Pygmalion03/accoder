@@ -253,8 +253,35 @@ const BRACKET_PAIRS = {
 
 const CLOSING_BRACKETS = Object.fromEntries(Object.entries(BRACKET_PAIRS).map(([open, close]) => [close, open]));
 
+let sessionTokenPromise;
+
+async function getSessionToken() {
+  if (!sessionTokenPromise) {
+    sessionTokenPromise = fetch("/api/session")
+      .then(async (response) => {
+        const body = await response.json();
+        if (!response.ok || !body.token) {
+          throw new Error(body.error || "无法建立本地运行会话。");
+        }
+        return body.token;
+      })
+      .catch((error) => {
+        sessionTokenPromise = undefined;
+        throw error;
+      });
+  }
+  return sessionTokenPromise;
+}
+
 async function getJson(url, options) {
-  const response = await fetch(url, options);
+  const requestOptions = { ...(options || {}) };
+  if (new URL(url, window.location.href).pathname === "/api/run") {
+    const headers = new Headers(requestOptions.headers || {});
+    headers.set("x-acmcoder-token", await getSessionToken());
+    requestOptions.headers = headers;
+  }
+
+  const response = await fetch(url, requestOptions);
   const body = await response.json();
   if (!response.ok) {
     throw new Error(body.error || `Request failed: ${response.status}`);

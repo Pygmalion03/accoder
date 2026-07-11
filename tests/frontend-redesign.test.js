@@ -285,8 +285,12 @@ test("web app keeps catalog and settings actions connected to existing local flo
 });
 
 test("today view reports accepted progress and opens recommendations in practice", () => {
+  const html = fs.readFileSync("web/index.html", "utf8");
   const script = fs.readFileSync("web/app.js", "utf8");
 
+  for (const count of [1, 2, 3, 4, 5]) {
+    assert.match(html, new RegExp(`<option value="${count}"(?: selected)?>${count} 题</option>`));
+  }
   assert.match(script, /dailyPlanProgress/);
   assert.match(script, /function renderDailyProgress\(/);
   assert.match(script, /function openPracticeForRecommendation\(/);
@@ -301,6 +305,8 @@ test("today view reports accepted progress and opens recommendations in practice
 test("practice view exposes session context, result switching, and mobile panels", () => {
   const script = fs.readFileSync("web/app.js", "utf8");
 
+  assert.match(script, /api\/session/);
+  assert.match(script, /x-acmcoder-token/);
   assert.match(script, /function renderDailySession\(/);
   assert.match(script, /function setMobilePracticeTab\(/);
   assert.match(script, /function setProblemInspectorOpen\(/);

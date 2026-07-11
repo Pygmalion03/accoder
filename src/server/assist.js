@@ -5,6 +5,7 @@ import { projectRoot } from "../core/problems.js";
 
 const DEFAULT_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_MODEL = "gpt-4.1-mini";
+const DEFAULT_MODEL_TIMEOUT_MS = 8000;
 
 export function getDefaultAssistSettings(env = process.env) {
   return {
@@ -29,6 +30,11 @@ function normalizeSettings(settings, env = process.env) {
     baseUrl: normalizeBaseUrl(settings.baseUrl ?? defaults.baseUrl),
     model: String(settings.model ?? defaults.model ?? DEFAULT_MODEL).trim() || DEFAULT_MODEL,
   };
+}
+
+function normalizeTimeoutMs(timeoutMs) {
+  const value = Math.floor(Number(timeoutMs || DEFAULT_MODEL_TIMEOUT_MS));
+  return Number.isFinite(value) && value > 0 ? value : DEFAULT_MODEL_TIMEOUT_MS;
 }
 
 export async function loadAssistSettings(settingsFile = getDefaultAssistSettingsFile(), env = process.env) {
@@ -114,41 +120,55 @@ export async function requestCodeAdvice(options = {}) {
     throw new Error("fetch is not available in this Node.js runtime.");
   }
 
-  const response = await fetchFn(`${settings.baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${settings.apiKey}`,
-    },
-    body: JSON.stringify({
+  const timeout = normalizeTimeoutMs(options.timeoutMs);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new Error(`Model request timed out after ${timeout} ms.`)), timeout);
+
+  try {
+    const response = await fetchFn(`${settings.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${settings.apiKey}`,
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: settings.model,
+        temperature: 0.2,
+        messages: [
+          {
+            role: "system",
+            content:
+              "你是 ACMCoder 的编程练习助手。用户可能会闲聊、询问题目、请求代码建议或分析运行错误。不要声称已经修改源代码。",
+          },
+          {
+            role: "user",
+            content: buildUserPrompt(options.context),
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(await readModelError(response));
+    }
+
+    const body = await response.json();
+    const message = body.choices?.[0]?.message?.content?.trim();
+    if (!message) {
+      throw new Error("Model response did not include advice text.");
+    }
+
+    return {
+      message,
       model: settings.model,
-      temperature: 0.2,
-      messages: [
-        {
-          role: "system",
-          content:
-            "你是 ACMCoder 的编程练习助手。用户可能会闲聊、询问题目、请求代码建议或分析运行错误。不要声称已经修改源代码。",
-        },
-        {
-          role: "user",
-          content: buildUserPrompt(options.context),
-        },
-      ],
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(await readModelError(response));
+    };
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw controller.signal.reason;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
   }
-
-  const body = await response.json();
-  const message = body.choices?.[0]?.message?.content?.trim();
-  if (!message) {
-    throw new Error("Model response did not include advice text.");
-  }
-
-  return {
-    message,
-    model: settings.model,
-  };
 }

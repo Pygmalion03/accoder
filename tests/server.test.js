@@ -41,6 +41,28 @@ async function saveMemoryPage(port, page) {
   assert.equal(response.status, 201);
 }
 
+async function getSessionToken(port, headers = {}) {
+  const response = await fetch(`http://127.0.0.1:${port}/api/session`, { headers });
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.match(body.token, /^[A-Za-z0-9_-]{32,}$/);
+  return body.token;
+}
+
+async function postRun(port, body, headers = {}) {
+  const token = await getSessionToken(port);
+  return fetch(`http://127.0.0.1:${port}/api/run`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-acmcoder-token": token,
+      ...headers,
+    },
+    body: JSON.stringify(body),
+  });
+}
+
 test("serves problem metadata over the local API", async () => {
   const deletedProblemsFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-problems-")), "deleted-problems.json");
   const server = createAcmcoderServer({ deletedProblemsFile });
@@ -88,7 +110,63 @@ test("handles extension CORS preflight for memory mode", async () => {
     });
 
     assert.equal(response.status, 204);
-    assert.equal(response.headers.get("access-control-allow-origin"), "*");
+    assert.equal(response.headers.get("access-control-allow-origin"), "chrome-extension://acmcoder");
+    assert.equal(response.headers.get("vary"), "Origin");
+  } finally {
+    server.close();
+  }
+});
+
+test("rejects untrusted browser origins before they can execute code", async () => {
+  const calls = [];
+  const server = createAcmcoderServer({
+    runSubmission: async (options) => {
+      calls.push(options);
+      return { status: "UNKNOWN", message: "should not run", stdout: "", stderr: "" };
+    },
+  });
+  const port = await listen(server);
+
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/run`, {
+      method: "POST",
+      headers: {
+        origin: "https://malicious.example",
+        "content-type": "text/plain",
+      },
+      body: JSON.stringify({ language: "python", code: "print('unsafe')", runner: "local" }),
+    });
+
+    assert.equal(response.status, 403);
+    assert.equal(response.headers.get("access-control-allow-origin"), null);
+    assert.equal(calls.length, 0);
+  } finally {
+    server.close();
+  }
+});
+
+test("requires a server-issued session token before executing code", async () => {
+  const calls = [];
+  const server = createAcmcoderServer({
+    runSubmission: async (options) => {
+      calls.push(options);
+      return { status: "UNKNOWN", message: "ran", stdout: "", stderr: "" };
+    },
+  });
+  const port = await listen(server);
+
+  try {
+    const denied = await fetch(`http://127.0.0.1:${port}/api/run`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ language: "python", code: "print(1)", runner: "local" }),
+    });
+    assert.equal(denied.status, 401);
+    assert.equal(calls.length, 0);
+
+    const allowed = await postRun(port, { language: "python", code: "print(1)", runner: "local" });
+    assert.equal(allowed.status, 200);
+    assert.equal(calls.length, 1);
   } finally {
     server.close();
   }
@@ -403,31 +481,23 @@ test("records accepted progress through run API and exposes it to problems and m
   try {
     await saveMemoryPage(port, memoryPage("reverse-linked-list", { title: "reverse linked list memory" }));
 
-    const firstRun = await fetch(`http://127.0.0.1:${port}/api/run`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        slug: "memory:reverse-linked-list",
-        language: "python",
-        code: "print(1)",
-        stdin: "",
-        expected: "",
-        runner: "local",
-      }),
+    const firstRun = await postRun(port, {
+      slug: "memory:reverse-linked-list",
+      language: "python",
+      code: "print(1)",
+      stdin: "",
+      expected: "",
+      runner: "local",
     });
     const firstBody = await firstRun.json();
 
-    const secondRun = await fetch(`http://127.0.0.1:${port}/api/run`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        slug: "reverse-linked-list",
-        language: "python",
-        code: "print(1)",
-        stdin: "",
-        expected: "",
-        runner: "docker",
-      }),
+    const secondRun = await postRun(port, {
+      slug: "reverse-linked-list",
+      language: "python",
+      code: "print(1)",
+      stdin: "",
+      expected: "",
+      runner: "docker",
     });
     const secondBody = await secondRun.json();
 
@@ -482,11 +552,7 @@ test("exports and imports problem progress idempotently", async () => {
 
   try {
     for (let index = 0; index < 2; index += 1) {
-      await fetch(`http://127.0.0.1:${sourcePort}/api/run`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ slug: "reverse-linked-list", language: "python", code: "print(1)", runner: "local" }),
-      });
+      await postRun(sourcePort, { slug: "reverse-linked-list", language: "python", code: "print(1)", runner: "local" });
     }
 
     const exportResponse = await fetch(`http://127.0.0.1:${sourcePort}/api/problems/export?slugs=reverse-linked-list`);
@@ -494,11 +560,7 @@ test("exports and imports problem progress idempotently", async () => {
     assert.equal(exportBody.problems[0].progress.acCount, 2);
 
     for (let index = 0; index < 3; index += 1) {
-      await fetch(`http://127.0.0.1:${targetPort}/api/run`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ slug: "reverse-linked-list", language: "python", code: "print(1)", runner: "local" }),
-      });
+      await postRun(targetPort, { slug: "reverse-linked-list", language: "python", code: "print(1)", runner: "local" });
     }
 
     const beforeImport = await fetch(`http://127.0.0.1:${targetPort}/api/problems`);
@@ -551,16 +613,12 @@ test("passes runner mode from run API into the runner layer", async () => {
   const port = await listen(server);
 
   try {
-    const response = await fetch(`http://127.0.0.1:${port}/api/run`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        language: "python",
-        code: "print(1)",
-        stdin: "",
-        expected: "",
-        runner: "docker",
-      }),
+    const response = await postRun(port, {
+      language: "python",
+      code: "print(1)",
+      stdin: "",
+      expected: "",
+      runner: "docker",
     });
     const body = await response.json();
 

@@ -4,6 +4,7 @@ import path from "node:path";
 import { projectRoot } from "../core/problems.js";
 
 const defaultDailyPlanFile = path.join(projectRoot, "data", "memory", "daily-plans.json");
+const DEFAULT_MODEL_TIMEOUT_MS = 8000;
 
 export function getDefaultDailyPlanFile() {
   return defaultDailyPlanFile;
@@ -30,6 +31,11 @@ function normalizeCount(count) {
     return 3;
   }
   return Math.max(1, Math.min(5, value));
+}
+
+function normalizeModelTimeoutMs(timeoutMs) {
+  const value = Math.floor(Number(timeoutMs || DEFAULT_MODEL_TIMEOUT_MS));
+  return Number.isFinite(value) && value > 0 ? value : DEFAULT_MODEL_TIMEOUT_MS;
 }
 
 function difficultyMixFor(items) {
@@ -73,9 +79,13 @@ function planItemFromCandidate(candidate, overrides = {}) {
   };
 }
 
-export function validateAiPlan(rawPlan, candidates = [], date = new Date().toISOString().slice(0, 10)) {
+export function validateAiPlan(rawPlan, candidates = [], date = new Date().toISOString().slice(0, 10), expectedCount) {
   if (!rawPlan || !Array.isArray(rawPlan.items)) {
     throw new Error("AI plan did not include items.");
+  }
+
+  if (!Number.isInteger(expectedCount) || expectedCount < 1 || rawPlan.items.length !== expectedCount) {
+    throw new Error("AI plan returned an unexpected item count.");
   }
 
   const candidateBySlug = new Map(candidates.map((candidate) => [candidate.leetcodeSlug, candidate]));
@@ -177,7 +187,7 @@ function normalizeBaseUrl(baseUrl) {
   return String(baseUrl || "https://api.openai.com/v1").trim().replace(/\/+$/, "") || "https://api.openai.com/v1";
 }
 
-async function requestAiPlan({ settings = {}, fetch, candidates = [], count = 3, date }) {
+async function requestAiPlan({ settings = {}, fetch, candidates = [], count = 3, date, modelTimeoutMs }) {
   if (!settings.apiKey) {
     throw new Error("Planner API key is not configured.");
   }
@@ -187,50 +197,64 @@ async function requestAiPlan({ settings = {}, fetch, candidates = [], count = 3,
     throw new Error("fetch is not available in this Node.js runtime.");
   }
 
-  const response = await fetchFn(`${normalizeBaseUrl(settings.baseUrl)}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${settings.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: settings.model || "gpt-4.1-mini",
-      temperature: 0.2,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are ACMCoder Daily Planner. Select only from the provided candidate slugs. Return strict JSON with theme and items. Do not invent problems. theme, focus 和 reason 必须使用中文，表达简洁。",
-        },
-        {
-          role: "user",
-          content: JSON.stringify({
-            date: normalizeDate(date),
-            count: normalizeCount(count),
-            candidates: candidates.map((candidate) => ({
-              leetcodeSlug: candidate.leetcodeSlug,
-              title: candidate.title,
-              difficulty: candidate.difficulty,
-              tags: candidate.tags,
-              score: candidate.score,
-              reasons: candidate.reasons || [],
-            })),
-            schema: {
-              theme: "string",
-              items: [{ leetcodeSlug: "string", focus: "string", reason: "string", estimatedMinutes: 25 }],
-            },
-          }),
-        },
-      ],
-    }),
-  });
+  const timeout = normalizeModelTimeoutMs(modelTimeoutMs);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new Error(`Planner model request timed out after ${timeout} ms.`)), timeout);
 
-  if (!response.ok) {
-    throw new Error(`Planner model request failed: ${response.status}`);
+  try {
+    const response = await fetchFn(`${normalizeBaseUrl(settings.baseUrl)}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${settings.apiKey}`,
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: settings.model || "gpt-4.1-mini",
+        temperature: 0.2,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are ACMCoder Daily Planner. Select only from the provided candidate slugs. Return strict JSON with theme and items. Do not invent problems. theme, focus 和 reason 必须使用中文，表达简洁。",
+          },
+          {
+            role: "user",
+            content: JSON.stringify({
+              date: normalizeDate(date),
+              count: normalizeCount(count),
+              candidates: candidates.map((candidate) => ({
+                leetcodeSlug: candidate.leetcodeSlug,
+                title: candidate.title,
+                difficulty: candidate.difficulty,
+                tags: candidate.tags,
+                score: candidate.score,
+                reasons: candidate.reasons || [],
+              })),
+              schema: {
+                theme: "string",
+                items: [{ leetcodeSlug: "string", focus: "string", reason: "string", estimatedMinutes: 25 }],
+              },
+            }),
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Planner model request failed: ${response.status}`);
+    }
+
+    const body = await response.json();
+    return extractJsonObject(body.choices?.[0]?.message?.content || "");
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw controller.signal.reason;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
   }
-
-  const body = await response.json();
-  return extractJsonObject(body.choices?.[0]?.message?.content || "");
 }
 
 export async function generateDailyPlan({
@@ -240,11 +264,17 @@ export async function generateDailyPlan({
   planFile = defaultDailyPlanFile,
   settings = {},
   fetch,
+  modelTimeoutMs = DEFAULT_MODEL_TIMEOUT_MS,
 } = {}) {
   let plan;
+  const expectedCount = Math.min(normalizeCount(count), candidates.length);
+  if (expectedCount === 0) {
+    return saveDailyPlan(createFallbackPlan({ candidates, date, count }), planFile);
+  }
+
   try {
-    const rawPlan = await requestAiPlan({ settings, fetch, candidates, count, date });
-    plan = validateAiPlan(rawPlan, candidates, date);
+    const rawPlan = await requestAiPlan({ settings, fetch, candidates, count: expectedCount, date, modelTimeoutMs });
+    plan = validateAiPlan(rawPlan, candidates, date, expectedCount);
   } catch {
     plan = createFallbackPlan({ candidates, date, count });
   }

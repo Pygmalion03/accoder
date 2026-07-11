@@ -94,6 +94,8 @@ test("sidebar can run code through the local runner", () => {
   assert.match(html, /<option value="docker">Docker runner<\/option>/);
   assert.match(script, /runCode/);
   assert.match(script, /api\/run/);
+  assert.match(script, /api\/session/);
+  assert.match(script, /x-acmcoder-token/);
   assert.match(script, /sidebarWorkspaceKey/);
   assert.match(script, /runner:\s*"acmcoder\.sidebar\.runner"/);
   assert.match(script, /runner:\s*document\.querySelector\("#runner"\)/);

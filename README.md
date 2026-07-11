@@ -2,7 +2,7 @@
 
 ACMCoder 是一个面向 LeetCode 侧栏练习的本地 ACM 练习器：代码、自测输入、运行结果、AC 记录和个人题库都在本机处理，加入练习的题目也可以在 Web 工作台查看完整题面。
 
-当前稳定版为 `v3.0.0`。
+当前稳定版为 `v3.0.1`。
 
 它有两个主要入口：
 
@@ -87,8 +87,8 @@ docker compose -f docker-compose.prebuilt.yml up -d
 如果你在 Compose 文件里固定了镜像 tag，把 tag 更新到当前版本：
 
 ```text
-ghcr.io/pygmalion03/acmcoder-app:v3.0.0
-ghcr.io/pygmalion03/acmcoder-runner:v3.0.0
+ghcr.io/pygmalion03/acmcoder-app:v3.0.1
+ghcr.io/pygmalion03/acmcoder-runner:v3.0.1
 ```
 
 ## 日常使用流程
@@ -191,8 +191,8 @@ ghcr.io/pygmalion03/acmcoder-app:latest
 需要锁版本时使用当前 Release tag：
 
 ```text
-ghcr.io/pygmalion03/acmcoder-app:v3.0.0
-ghcr.io/pygmalion03/acmcoder-runner:v3.0.0
+ghcr.io/pygmalion03/acmcoder-app:v3.0.1
+ghcr.io/pygmalion03/acmcoder-runner:v3.0.1
 ```
 
 更多部署边界见 [`docs/deployment.md`](docs/deployment.md)。
@@ -205,14 +205,14 @@ ghcr.io/pygmalion03/acmcoder-runner:v3.0.0
 - 支持 Edge/Chrome 手动加载浏览器插件，在 LeetCode 题目页打开侧栏练习。
 - 支持个人题库、完整练习页、AC 次数、导入导出和批量删除。
 - 内置 30 道中文高频推荐题，支持推荐题库导入、导出、全选和批量删除。
-- 支持按题量、难度和标签生成每日计划；模型不可用时自动使用本地规则计划。
+- 支持按题量、难度和标签生成每日计划，每天可选 1 至 5 道题；模型不可用时自动使用本地规则计划。
 - 支持可选 OpenAI-compatible 每日推荐和代码建议，但不使用 LLM 作为判题器。
 - 推荐题库只保存题目索引和 LeetCode 链接；加入个人题库时按需读取完整题面并保存在本机。
 - Web 工作台会同步插件新增题目和 AC 进度，同时保留当前代码、输入和选题。
 
 ## 模型建议和本地数据
 
-模型能力是可选增强，不参与判题，也不会覆盖源代码。每日计划只允许模型从本地候选题中选择；模型不可用或返回内容不合法时，系统改用确定性的本地规则。用户也可以主动请求代码建议。API Key、Base URL 和 Model 都在本机配置，服务端通过 OpenAI-compatible `chat/completions` 接口请求结果。
+模型能力是可选增强，不参与判题，也不会覆盖源代码。每日计划只允许模型从本地候选题中选择；模型返回的题量、slug 或去重结果不符合要求，或者请求超过 8 秒时，系统改用确定性的本地规则。用户也可以主动请求代码建议。API Key、Base URL 和 Model 都在本机配置，服务端通过 OpenAI-compatible `chat/completions` 接口请求结果。
 
 本地数据默认保存在：
 
@@ -222,12 +222,15 @@ data/memory/
 
 这个目录已被 git 忽略。API Key 目前是本机明文保存，适合个人本地使用，不要把自己的 `data/memory` 目录分享给别人。
 
+本地 HTTP 服务会拒绝普通外部网页的跨域请求，只接受本机同源页面、ACMCoder 浏览器扩展或不经过浏览器的本机客户端。执行代码前，Web 页面和侧栏会先从 `GET /api/session` 获取本次服务进程的临时令牌，再通过 `X-ACMCoder-Token` 请求头调用 `/api/run`；服务重启后令牌自动更换。
+
 ## 接口和目录
 
 常用本地接口：
 
 ```text
 GET  /api/doctor
+GET  /api/session
 POST /api/run
 GET  /api/memory/pages
 POST /api/memory/pages

@@ -60,6 +60,7 @@ test("validates an AI plan against allowed candidate slugs", () => {
     },
     candidates,
     "2026-07-09",
+    2,
   );
 
   assert.equal(plan.source, "ai");
@@ -73,13 +74,26 @@ test("validates an AI plan against allowed candidate slugs", () => {
 
 test("rejects AI plans with unknown or duplicate slugs", () => {
   assert.throws(
-    () => validateAiPlan({ theme: "bad", items: [{ leetcodeSlug: "unknown" }] }, candidates, "2026-07-09"),
+    () => validateAiPlan({ theme: "bad", items: [{ leetcodeSlug: "unknown" }] }, candidates, "2026-07-09", 1),
     /unknown candidate/,
   );
 
   assert.throws(
-    () => validateAiPlan({ theme: "bad", items: [{ leetcodeSlug: "two-sum" }, { leetcodeSlug: "two-sum" }] }, candidates, "2026-07-09"),
+    () =>
+      validateAiPlan(
+        { theme: "bad", items: [{ leetcodeSlug: "two-sum" }, { leetcodeSlug: "two-sum" }] },
+        candidates,
+        "2026-07-09",
+        2,
+      ),
     /duplicate candidate/,
+  );
+});
+
+test("rejects AI plans that return fewer items than requested", () => {
+  assert.throws(
+    () => validateAiPlan({ theme: "too short", items: [{ leetcodeSlug: "two-sum" }] }, candidates, "2026-07-09", 2),
+    /unexpected item count/,
   );
 });
 
@@ -182,6 +196,57 @@ test("falls back when AI returns invalid JSON or unknown candidates", async () =
     plan.items.map((item) => item.leetcodeSlug),
     ["two-sum", "lru-cache"],
   );
+});
+
+test("falls back when AI returns a valid candidate list with the wrong item count", async () => {
+  const planFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-plan-count-")), "daily-plans.json");
+  const plan = await generateDailyPlan({
+    candidates,
+    date: "2026-07-09",
+    count: 2,
+    planFile,
+    settings: { apiKey: "sk-local-test", baseUrl: "https://llm.example.test/v1", model: "planner-model" },
+    fetch: async () =>
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: JSON.stringify({ theme: "short", items: [{ leetcodeSlug: "two-sum" }] }) } }],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+  });
+
+  assert.equal(plan.source, "fallback");
+  assert.deepEqual(
+    plan.items.map((item) => item.leetcodeSlug),
+    ["two-sum", "lru-cache"],
+  );
+});
+
+test("aborts a slow AI request and falls back within the configured deadline", async () => {
+  const planFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-plan-timeout-")), "daily-plans.json");
+  let receivedSignal;
+
+  const plan = await generateDailyPlan({
+    candidates,
+    date: "2026-07-09",
+    count: 2,
+    planFile,
+    modelTimeoutMs: 10,
+    settings: { apiKey: "sk-local-test", baseUrl: "https://llm.example.test/v1", model: "planner-model" },
+    fetch: async (_url, options) =>
+      new Promise((_resolve, reject) => {
+        receivedSignal = options.signal;
+        if (!receivedSignal) {
+          reject(new Error("missing abort signal"));
+          return;
+        }
+        receivedSignal.addEventListener("abort", () => reject(receivedSignal.reason), { once: true });
+      }),
+  });
+
+  assert.ok(receivedSignal);
+  assert.equal(receivedSignal.aborted, true);
+  assert.equal(plan.source, "fallback");
 });
 
 test("updates item actions inside a stored daily plan", async () => {

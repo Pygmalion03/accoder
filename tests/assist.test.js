@@ -105,3 +105,34 @@ test("requires a configured API key before asking for model advice", async () =>
     /LLM API Key/,
   );
 });
+
+test("aborts a code-advice request after the configured timeout", async () => {
+  let receivedSignal;
+
+  await assert.rejects(
+    () =>
+      requestCodeAdvice({
+        settings: {
+          ...getDefaultAssistSettings(),
+          apiKey: "sk-local-test",
+          baseUrl: "https://llm.example.test/v1",
+          model: "coder-model",
+        },
+        timeoutMs: 10,
+        fetch: async (_url, options) =>
+          new Promise((_resolve, reject) => {
+            receivedSignal = options.signal;
+            if (!receivedSignal) {
+              reject(new Error("missing abort signal"));
+              return;
+            }
+            receivedSignal.addEventListener("abort", () => reject(receivedSignal.reason), { once: true });
+          }),
+        context: { language: "python", code: "print(1)" },
+      }),
+    /timed out/i,
+  );
+
+  assert.ok(receivedSignal);
+  assert.equal(receivedSignal.aborted, true);
+});

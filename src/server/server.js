@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import http from "node:http";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -71,14 +72,56 @@ const contentTypes = {
   ".json": "application/json; charset=utf-8",
 };
 
-const corsHeaders = {
-  "access-control-allow-origin": "*",
-  "access-control-allow-methods": "GET,POST,DELETE,OPTIONS",
-  "access-control-allow-headers": "content-type",
-};
+const localBrowserHosts = new Set(["127.0.0.1", "localhost", "::1", "0.0.0.0"]);
+const extensionOriginPattern = /^(?:chrome|edge)-extension:\/\/[a-z0-9_-]+$/i;
+
+function requestOrigin(request) {
+  return String(request.headers.origin || "").trim();
+}
+
+function isTrustedBrowserOrigin(request) {
+  const origin = requestOrigin(request);
+  if (!origin) {
+    return true;
+  }
+  if (extensionOriginPattern.test(origin)) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(origin);
+    const requestHost = String(request.headers.host || "").toLowerCase();
+    return (
+      ["http:", "https:"].includes(parsed.protocol) &&
+      localBrowserHosts.has(parsed.hostname.toLowerCase()) &&
+      parsed.host.toLowerCase() === requestHost
+    );
+  } catch {
+    return false;
+  }
+}
+
+function applyCorsHeaders(request, response) {
+  const origin = requestOrigin(request);
+  response.setHeader("vary", "Origin");
+  if (!origin) {
+    return;
+  }
+
+  response.setHeader("access-control-allow-origin", origin);
+  response.setHeader("access-control-allow-methods", "GET,POST,DELETE,OPTIONS");
+  response.setHeader("access-control-allow-headers", "content-type,x-acmcoder-token");
+}
+
+function hasValidSessionToken(request, expectedToken) {
+  const providedToken = String(request.headers["x-acmcoder-token"] || "");
+  const provided = Buffer.from(providedToken);
+  const expected = Buffer.from(expectedToken);
+  return provided.length === expected.length && timingSafeEqual(provided, expected);
+}
 
 function sendJson(response, status, payload) {
-  response.writeHead(status, { "content-type": "application/json; charset=utf-8", ...corsHeaders });
+  response.writeHead(status, { "content-type": "application/json; charset=utf-8" });
   response.end(JSON.stringify(payload, null, 2));
 }
 
@@ -86,13 +129,12 @@ function sendJsonDownload(response, filename, payload) {
   response.writeHead(200, {
     "content-type": "application/json; charset=utf-8",
     "content-disposition": `attachment; filename="${filename}"`,
-    ...corsHeaders,
   });
   response.end(JSON.stringify(payload, null, 2));
 }
 
 function sendNoContent(response) {
-  response.writeHead(204, corsHeaders);
+  response.writeHead(204);
   response.end();
 }
 
@@ -258,13 +300,26 @@ export function createAcmcoderServer(options = {}) {
   const listLanguages = options.listLanguages || defaultListLanguages;
   const checkToolchain = options.checkToolchain || defaultCheckToolchain;
   const checkDockerRunner = options.checkDockerRunner || defaultCheckDockerRunner;
+  const sessionToken = options.sessionToken || randomBytes(32).toString("base64url");
 
   return http.createServer(async (request, response) => {
     const requestUrl = new URL(request.url, "http://127.0.0.1");
 
     try {
+      if (!isTrustedBrowserOrigin(request)) {
+        sendJson(response, 403, { error: "Browser origin is not allowed." });
+        return;
+      }
+
+      applyCorsHeaders(request, response);
+
       if (request.method === "OPTIONS") {
         sendNoContent(response);
+        return;
+      }
+
+      if (request.method === "GET" && requestUrl.pathname === "/api/session") {
+        sendJson(response, 200, { token: sessionToken });
         return;
       }
 
@@ -460,6 +515,11 @@ export function createAcmcoderServer(options = {}) {
       }
 
       if (request.method === "POST" && requestUrl.pathname === "/api/run") {
+        if (!hasValidSessionToken(request, sessionToken)) {
+          sendJson(response, 401, { error: "A valid ACMCoder session token is required." });
+          return;
+        }
+
         const body = await readJsonBody(request);
         const result = await runSubmission({
           language: body.language,
