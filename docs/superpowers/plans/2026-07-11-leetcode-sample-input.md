@@ -42,6 +42,6 @@
 - Synchronize: `E:/Projects/acmcoder/submission/25126627/code`
 
 - [x] Run `npm test` in the development worktree and verify the complete suite passes.
-- [ ] Copy only the reviewed changed files into the submission repository and run `npm test` there.
-- [ ] Restart the local app and verify Two Sum no longer loads `nums = [...]` into `stdin`, while a seed problem still loads its ACM test case.
-- [ ] Confirm Git status contains only intended changes plus the user's pre-existing untracked workbook.
+- [x] Copy only the reviewed changed files into the submission repository and run `npm test` there.
+- [x] Restart the local app and verify Two Sum no longer loads `nums = [...]` into `stdin`; the seed-problem behavior remains covered by the focused unit test.
+- [x] Confirm Git status contains only intended changes plus the user's pre-existing untracked workbook.
