@@ -1,5 +1,10 @@
-import { hydrateIcons } from "./icons.js";
-import { normalizeUtilityTab, normalizeView } from "./view-state.js";
+import { hydrateIcons, iconMarkup } from "./icons.js";
+import {
+  canonicalProblemSlug,
+  dailyPlanProgress,
+  normalizeUtilityTab,
+  normalizeView,
+} from "./view-state.js";
 
 const state = {
   problems: [],
@@ -962,8 +967,10 @@ async function selectProblem(slug, options = {}) {
   restoreWorkspaceCache();
   saveWorkspaceCache();
   renderProblemList();
+  renderDailySession();
   if (options.openView !== false) {
     setActiveView("practice");
+    setMobilePracticeTab("code");
   }
 }
 
@@ -976,6 +983,8 @@ function setResult(result) {
 }
 
 async function runCode() {
+  setUtilityTab("result");
+  setMobilePracticeTab("result");
   elements.status.className = "status";
   elements.status.textContent = "RUNNING";
   elements.message.textContent = `Running ${elements.runner.value} runner...`;
@@ -1002,6 +1011,7 @@ async function runCode() {
       applyProgress(state.selected.slug, body.progress);
       renderProblemList();
       elements.eyebrow.textContent = formatEyebrow(state.selected);
+      renderDailyProgress();
     }
     saveWorkspaceCache();
   } catch (error) {
@@ -1094,6 +1104,44 @@ function updateLibraryCount() {
   elements.libraryCount.textContent = String(state.problems.length);
 }
 
+function setMobilePracticeTab(value) {
+  const tab = ["problem", "code", "result"].includes(value) ? value : "code";
+  state.mobilePracticeTab = tab;
+  for (const button of elements.mobilePracticeTabs) {
+    const active = button.dataset.mobilePracticeTab === tab;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", String(active));
+  }
+  for (const panel of elements.mobilePracticePanels) {
+    panel.classList.toggle("is-mobile-active", panel.dataset.mobilePracticePanel === tab);
+  }
+}
+
+function setProblemInspectorOpen(open) {
+  state.problemInspectorOpen = Boolean(open);
+  elements.problemInspector.classList.toggle("is-open", state.problemInspectorOpen);
+  elements.toggleProblemInspector.setAttribute("aria-expanded", String(state.problemInspectorOpen));
+}
+
+function renderDailyProgress() {
+  const progress = dailyPlanProgress(state.dailyPlan, state.problems);
+  elements.dailyProgressCount.textContent = `${progress.completed} / ${progress.total}`;
+  elements.dailyProgressBar.style.width = `${progress.percent}%`;
+  const track = elements.dailyProgressBar.closest('[role="progressbar"]');
+  if (track) track.setAttribute("aria-valuenow", String(progress.percent));
+}
+
+function renderDailySession() {
+  const slug = canonicalProblemSlug(state.selected);
+  const items = Array.isArray(state.dailyPlan?.items) ? state.dailyPlan.items : [];
+  const index = items.findIndex((item) => item.leetcodeSlug === slug);
+  if (index < 0) {
+    elements.dailySession.textContent = "自由练习 · 不计入今日计划队列";
+    return;
+  }
+  elements.dailySession.textContent = `今日计划 ${index + 1} / ${items.length} · ${items[index].focus || items[index].reason || "高频题训练"}`;
+}
+
 function setDailyStatus(message, kind = "") {
   elements.dailyStatus.textContent = message;
   elements.dailyStatus.className = `daily-status ${kind}`.trim();
@@ -1119,36 +1167,41 @@ function formatDailyMeta(item) {
 function renderDailyPlan(plan) {
   state.dailyPlan = plan;
   elements.dailyList.innerHTML = "";
+  renderDailyProgress();
+  renderDailySession();
 
   if (!plan?.items?.length) {
     setDailyStatus("还没有今日计划。导入推荐题库后点击生成。");
+    elements.dailyPlanSource.textContent = "等待生成";
     return;
   }
 
   setDailyStatus(`${plan.theme} · ${plan.source === "ai" ? "AI 推荐" : "本地规则"}`);
+  elements.dailyPlanSource.textContent = plan.source === "ai" ? "AI 个性化推荐" : "本地规则推荐";
 
-  for (const item of plan.items) {
+  plan.items.forEach((item, index) => {
     const addedToPractice = Boolean(item.actions?.addedToPractice);
-    const mastered = Boolean(item.actions?.mastered);
     const row = document.createElement("article");
     row.className = "daily-item";
     row.innerHTML = `
-      <div class="daily-item-head">
-        <div>
-          <h4>${escapeHtml(item.title || item.leetcodeSlug)}</h4>
-          <p class="daily-item-meta">${escapeHtml(formatDailyMeta(item))}</p>
+      <div class="daily-index">${index + 1}</div>
+      <div class="daily-item-content">
+        <div class="daily-item-head">
+          <div>
+            <h3>${escapeHtml(item.title || item.leetcodeSlug)}</h3>
+            <p class="daily-item-meta">${escapeHtml(formatDailyMeta(item))}</p>
+          </div>
+          <span class="daily-focus">${escapeHtml(item.focus || "高频训练")}</span>
         </div>
+        <p class="daily-item-reason">${escapeHtml(item.reason || item.focus || "")}</p>
         <div class="daily-item-actions">
-          <a class="link-button" href="${escapeHtml(item.leetcodeUrl)}" target="_blank" rel="noreferrer" data-daily-action="open" data-slug="${escapeHtml(item.leetcodeSlug)}">LeetCode</a>
-          <button type="button" data-daily-action="add_to_practice" data-slug="${escapeHtml(item.leetcodeSlug)}" ${addedToPractice ? "disabled" : ""}>${addedToPractice ? "已加入" : "加入练习"}</button>
-          <button type="button" class="secondary" data-daily-action="skip" data-slug="${escapeHtml(item.leetcodeSlug)}">跳过</button>
-          <button type="button" class="secondary" data-daily-action="mastered" data-slug="${escapeHtml(item.leetcodeSlug)}" ${mastered ? "disabled" : ""}>${mastered ? "已掌握" : "标记掌握"}</button>
+          <a class="secondary-action" href="${escapeHtml(item.leetcodeUrl)}" target="_blank" rel="noreferrer" data-daily-action="open" data-slug="${escapeHtml(item.leetcodeSlug)}">${iconMarkup("external-link")}打开原题</a>
+          <button class="primary-action" type="button" data-daily-action="${addedToPractice ? "practice" : "add_to_practice"}" data-slug="${escapeHtml(item.leetcodeSlug)}">${iconMarkup("code-2")}${addedToPractice ? "打开练习" : "加入并练习"}</button>
         </div>
       </div>
-      <p class="daily-item-reason">${escapeHtml(item.reason || item.focus || "")}</p>
     `;
     elements.dailyList.appendChild(row);
-  }
+  });
 }
 
 async function importRecommendationCatalog(file) {
@@ -1180,7 +1233,16 @@ function renderRecommendationCatalog() {
   for (const item of state.catalog) {
     const row = document.createElement("article");
     row.className = "catalog-item";
-    row.innerHTML = `<strong>${escapeHtml(item.title || item.leetcodeSlug || item.slug)}</strong>`;
+    const score = Math.round(Number(item.frequencyScore || 0) * 100);
+    row.innerHTML = `
+      <div class="catalog-rank">${Number.isFinite(item.sourceRank) && item.sourceRank < Number.MAX_SAFE_INTEGER ? `#${item.sourceRank}` : `${score}%`}</div>
+      <div class="catalog-item-content">
+        <h3>${escapeHtml(item.title || item.leetcodeSlug)}</h3>
+        <p>${escapeHtml(formatDailyMeta(item))}</p>
+      </div>
+      <span class="catalog-source">${escapeHtml(item.source || "本地导入")}</span>
+      <a class="icon-button" href="${escapeHtml(item.leetcodeUrl)}" target="_blank" rel="noreferrer" title="打开 LeetCode" aria-label="打开 LeetCode">${iconMarkup("external-link")}</a>
+    `;
     elements.catalogList.appendChild(row);
   }
 }
@@ -1220,8 +1282,27 @@ async function generateDailyPlan() {
   }
 }
 
+async function openPracticeForRecommendation(slug) {
+  const problemSlug = `memory:${slug}`;
+  let problem = state.problems.find((item) => item.slug === problemSlug);
+  if (!problem) {
+    await reloadProblems({ preserveView: true });
+    problem = state.problems.find((item) => item.slug === problemSlug);
+  }
+  if (!problem) {
+    throw new Error("这道题还没有加入我的题库。");
+  }
+  await selectProblem(problem.slug);
+  setActiveView("practice");
+}
+
 async function recordDailyAction(slug, action) {
   if (!slug || !action) {
+    return;
+  }
+
+  if (action === "practice") {
+    await openPracticeForRecommendation(slug);
     return;
   }
 
@@ -1234,7 +1315,8 @@ async function recordDailyAction(slug, action) {
   });
   renderDailyPlan(body.plan);
   if (action === "add_to_practice") {
-    await reloadProblems();
+    await reloadProblems({ preserveView: true });
+    await openPracticeForRecommendation(slug);
   }
 }
 
@@ -1244,6 +1326,7 @@ async function reloadProblems({ preserveView = false } = {}) {
   await loadMemoryHistory().catch(() => false);
   renderProblemList();
   updateLibraryCount();
+  renderDailyProgress();
 
   if (!state.selected || !state.problems.some((problem) => problem.slug === state.selected.slug)) {
     const fallback = state.problems[0];
@@ -1357,6 +1440,8 @@ async function init() {
   }).format(new Date());
   setActiveView("today");
   setUtilityTab("test");
+  setMobilePracticeTab("code");
+  setProblemInspectorOpen(false);
 
   const body = await getJson("/api/problems");
   state.problems = body.problems;
@@ -1374,7 +1459,22 @@ async function init() {
   }
   for (const tab of elements.utilityTabs) {
     tab.addEventListener("click", () => setUtilityTab(tab.dataset.utilityTab));
+    tab.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      event.preventDefault();
+      const offset = event.key === "ArrowRight" ? 1 : -1;
+      const index = elements.utilityTabs.indexOf(tab);
+      const next = elements.utilityTabs[(index + offset + elements.utilityTabs.length) % elements.utilityTabs.length];
+      setUtilityTab(next.dataset.utilityTab);
+      next.focus();
+    });
   }
+  for (const tab of elements.mobilePracticeTabs) {
+    tab.addEventListener("click", () => setMobilePracticeTab(tab.dataset.mobilePracticeTab));
+  }
+  elements.toggleProblemInspector.addEventListener("click", () => {
+    setProblemInspectorOpen(!state.problemInspectorOpen);
+  });
   elements.mobileMoreToggle.addEventListener("click", () => setMobileMoreOpen(!state.mobileMoreOpen));
   elements.globalSearch.addEventListener("click", () => {
     setActiveView("library");

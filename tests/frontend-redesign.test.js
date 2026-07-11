@@ -152,7 +152,7 @@ test("local icon markup exposes the required Lucide icons", () => {
 test("web app wires the five-view workspace and utility tabs", () => {
   const script = fs.readFileSync("web/app.js", "utf8");
 
-  assert.match(script, /import \{ hydrateIcons \} from "\.\/icons\.js"/);
+  assert.match(script, /import \{ hydrateIcons, iconMarkup \} from "\.\/icons\.js"/);
   assert.match(script, /import \{[\s\S]*normalizeUtilityTab[\s\S]*normalizeView[\s\S]*\} from "\.\/view-state\.js"/);
   assert.match(script, /activeView:\s*"today"/);
   assert.match(script, /activeUtilityTab:\s*"test"/);
@@ -171,4 +171,48 @@ test("web app keeps catalog and settings actions connected to existing local flo
   assert.match(script, /globalSearch/);
   assert.match(script, /api\/recommendation\/catalog/);
   assert.match(script, /reloadProblems\(\{ preserveView = false \} = \{\}\)/);
+});
+
+test("today view reports accepted progress and opens recommendations in practice", () => {
+  const script = fs.readFileSync("web/app.js", "utf8");
+
+  assert.match(script, /dailyPlanProgress/);
+  assert.match(script, /function renderDailyProgress\(/);
+  assert.match(script, /function openPracticeForRecommendation\(/);
+  assert.match(script, /打开原题/);
+  assert.match(script, /加入并练习/);
+  assert.match(script, /memory:\$\{slug\}/);
+  assert.match(script, /setActiveView\("practice"\)/);
+});
+
+test("practice view exposes session context, result switching, and mobile panels", () => {
+  const script = fs.readFileSync("web/app.js", "utf8");
+
+  assert.match(script, /function renderDailySession\(/);
+  assert.match(script, /function setMobilePracticeTab\(/);
+  assert.match(script, /function setProblemInspectorOpen\(/);
+  assert.match(script, /setUtilityTab\("result"\)/);
+  assert.match(script, /data-mobile-practice-tab/);
+});
+
+test("visual system uses restrained glass surfaces and an opaque coding workspace", () => {
+  const css = fs.readFileSync("web/styles.css", "utf8");
+
+  assert.match(css, /--page-backing:\s*#cbd9d4/);
+  assert.match(css, /--glass-surface:\s*rgba\(245,\s*249,\s*247,\s*\.68\)/);
+  assert.match(css, /--editor:\s*#0d1113/);
+  assert.match(css, /\.app-nav\s*\{[\s\S]*backdrop-filter:\s*blur\(/);
+  assert.match(css, /\.editor-pane\s*\{[\s\S]*background:\s*var\(--editor\)/);
+  assert.match(css, /@supports not \(backdrop-filter:/);
+  assert.doesNotMatch(css, /(?:linear|radial)-gradient\(/);
+});
+
+test("visual system provides compact tablet and mobile navigation layouts", () => {
+  const css = fs.readFileSync("web/styles.css", "utf8");
+
+  assert.match(css, /@media \(max-width:\s*1179px\)/);
+  assert.match(css, /@media \(max-width:\s*759px\)/);
+  assert.match(css, /\.mobile-nav/);
+  assert.match(css, /\.mobile-practice-tabs/);
+  assert.match(css, /prefers-reduced-motion:\s*reduce/);
 });
