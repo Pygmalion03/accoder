@@ -10,6 +10,7 @@ import {
   normalizeUtilityTab,
   normalizeView,
 } from "../web/view-state.js";
+import { iconMarkup } from "../web/icons.js";
 
 test("defines and normalizes application views and utility tabs", () => {
   assert.deepEqual(APP_VIEWS, ["today", "practice", "library", "catalog", "settings"]);
@@ -57,4 +58,93 @@ test("web UI has no runtime CDN or font URL dependencies", () => {
   const html = fs.readFileSync("web/index.html", "utf8");
 
   assert.doesNotMatch(html, /https?:\/\/(?:unpkg|cdn|fonts\.)/i);
+});
+
+test("web UI exposes the semantic application shell and every view target", () => {
+  const html = fs.readFileSync("web/index.html", "utf8");
+
+  assert.match(html, /id="app-navigation"/);
+  assert.match(html, /data-nav-group="smart-practice"/);
+  assert.match(html, /data-nav-group="workspace"/);
+  assert.match(html, /data-nav-group="system"/);
+  assert.match(html, /aria-live="polite"/);
+
+  for (const view of APP_VIEWS) {
+    assert.match(html, new RegExp(`id="view-${view}"`));
+    assert.match(html, new RegExp(`data-view-target="${view}"`));
+  }
+});
+
+test("web UI preserves each behavior-bearing element ID exactly once", () => {
+  const html = fs.readFileSync("web/index.html", "utf8");
+  const ids = [
+    "search",
+    "problem-list",
+    "select-problems",
+    "delete-problems",
+    "export-problems",
+    "import-problems",
+    "import-file",
+    "problem-title",
+    "eyebrow",
+    "leetcode-link",
+    "problem-description",
+    "language",
+    "runner",
+    "runner-health",
+    "load-template",
+    "run",
+    "code-editor",
+    "line-numbers",
+    "code-highlight",
+    "code",
+    "stdin",
+    "expected",
+    "sample-io",
+    "clear-expected",
+    "status",
+    "message",
+    "stdout",
+    "stderr",
+    "assist-key",
+    "assist-base-url",
+    "assist-model",
+    "save-assist-settings",
+    "assist-question",
+    "ask-assist",
+    "assist-answer",
+    "daily-count",
+    "daily-difficulty",
+    "daily-tags",
+    "generate-daily",
+    "import-catalog",
+    "catalog-file",
+    "daily-status",
+    "daily-list",
+  ];
+
+  for (const id of ids) {
+    assert.equal(html.match(new RegExp(`id="${id}"`, "g"))?.length, 1, id);
+  }
+});
+
+test("local icon markup exposes the required Lucide icons", () => {
+  const iconNames = [
+    "home",
+    "sparkles",
+    "code-2",
+    "library-big",
+    "settings",
+    "search",
+    "external-link",
+    "play",
+    "upload",
+    "download",
+    "trash-2",
+  ];
+
+  for (const name of iconNames) {
+    assert.match(iconMarkup(name), /^<svg\b/, name);
+  }
+  assert.equal(iconMarkup("missing"), "");
 });

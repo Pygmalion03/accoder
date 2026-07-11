@@ -3,179 +3,236 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#cbd9d4" />
     <title>ACMCoder</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23191b1f'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='32' font-family='Arial' font-weight='700' fill='white'%3EA%3C/text%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2317231f'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='32' font-family='Arial' font-weight='700' fill='white'%3EA%3C/text%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body>
-    <main class="shell">
-      <aside class="sidebar">
-        <div class="brand">
-          <div class="brand-mark">A</div>
-          <div>
-            <h1>ACMCoder</h1>
-            <p>LeetCode 题目的本地 ACM 练习器</p>
-          </div>
-        </div>
-        <label class="search">
-          <span>搜索</span>
-          <input id="search" type="search" placeholder="slug / 题号 / 标签" />
-        </label>
-        <div class="memory-actions">
-          <button id="select-problems" type="button">选择题目</button>
-          <button id="export-problems" type="button">导出全部</button>
-          <button id="import-problems" type="button">导入</button>
-          <button id="delete-problems" type="button" class="danger" disabled hidden>删除选中</button>
-          <input id="import-file" type="file" accept="application/json,.json" hidden />
-        </div>
-        <div id="problem-list" class="problem-list"></div>
+  <body data-active-view="today">
+    <main class="app-shell">
+      <aside id="app-navigation" class="app-nav" aria-label="主要功能">
+        <button class="brand" type="button" data-view-target="today" aria-label="返回今日计划">
+          <span class="brand-mark">A</span>
+          <span class="brand-copy"><strong>ACMCoder</strong><small>Practice OS</small></span>
+        </button>
+
+        <nav class="nav-sections">
+          <section data-nav-group="smart-practice" aria-labelledby="smart-practice-label">
+            <p id="smart-practice-label" class="nav-label">智能练习</p>
+            <button class="nav-item is-active" type="button" data-view-target="today" aria-current="page">
+              <span data-icon="home"></span><span>今日计划</span>
+            </button>
+            <button class="nav-item" type="button" data-view-target="catalog">
+              <span data-icon="sparkles"></span><span>推荐题库</span>
+            </button>
+          </section>
+          <section data-nav-group="workspace" aria-labelledby="workspace-label">
+            <p id="workspace-label" class="nav-label">工作区</p>
+            <button class="nav-item" type="button" data-view-target="practice">
+              <span data-icon="code-2"></span><span>编程练习</span>
+            </button>
+            <button class="nav-item" type="button" data-view-target="library">
+              <span data-icon="library-big"></span><span>我的题库</span><span id="library-count" class="nav-count">0</span>
+            </button>
+          </section>
+          <section data-nav-group="system" aria-labelledby="system-label">
+            <p id="system-label" class="nav-label">系统</p>
+            <button class="nav-item" type="button" data-view-target="settings">
+              <span data-icon="settings"></span><span>设置</span>
+            </button>
+          </section>
+        </nav>
+
+        <div id="nav-runner-health" class="nav-health" aria-live="polite">正在检测运行环境</div>
       </aside>
 
-      <section class="workspace">
-        <header class="topbar">
+      <section class="app-content">
+        <header class="global-bar">
           <div>
-              <p id="eyebrow" class="eyebrow">ACM Runner</p>
-            <h2 id="problem-title">加载中</h2>
+            <p class="global-kicker">DAILY PRACTICE</p>
+            <time id="current-date"></time>
           </div>
-          <a id="leetcode-link" class="link-button" href="#" target="_blank" rel="noreferrer">LeetCode</a>
+          <div class="global-actions">
+            <button id="global-search" class="icon-button" type="button" title="搜索题目" aria-label="搜索题目" data-icon="search"></button>
+            <button class="icon-button" type="button" title="打开设置" aria-label="打开设置" data-view-target="settings" data-icon="settings"></button>
+          </div>
         </header>
 
-        <section id="daily-panel" class="daily-panel">
-          <div class="daily-head">
+        <section id="view-today" class="app-view today-view" data-view="today" tabindex="-1">
+          <header class="view-heading">
             <div>
-              <p class="eyebrow">Daily Planner</p>
-              <h3>每日刷题</h3>
+              <p class="eyebrow-copy">TODAY</p>
+              <h1 id="today-title">今天练什么</h1>
+              <p id="daily-status" class="view-description" aria-live="polite">正在读取今日计划...</p>
             </div>
-            <div class="daily-actions">
-              <button id="import-catalog" type="button" class="secondary">导入推荐题库</button>
-              <input id="catalog-file" type="file" accept="application/json,.json" hidden />
-              <button id="generate-daily" type="button">生成今日计划</button>
-            </div>
+            <button id="generate-daily" class="primary-action" type="button"><span data-icon="sparkles"></span>生成今日计划</button>
+          </header>
+
+          <div class="today-layout">
+            <section id="daily-panel" class="today-plan daily-panel" aria-labelledby="today-plan-heading">
+              <div class="section-heading">
+                <div>
+                  <p class="section-kicker">今日队列</p>
+                  <h2 id="today-plan-heading">高频题训练</h2>
+                </div>
+                <span id="daily-plan-source" class="source-label">本地推荐题库</span>
+              </div>
+              <div id="daily-list" class="daily-list"></div>
+            </section>
+
+            <aside class="today-inspector" aria-label="计划配置与进度">
+              <section class="progress-panel">
+                <div class="progress-heading">
+                  <span>今日完成度</span>
+                  <strong id="daily-progress-count">0 / 0</strong>
+                </div>
+                <div class="progress-track" role="progressbar" aria-label="今日完成度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <span id="daily-progress-bar"></span>
+                </div>
+                <p>仅统计今天通过的题目</p>
+              </section>
+
+              <section class="plan-controls" aria-labelledby="plan-controls-heading">
+                <div class="section-heading compact">
+                  <div><p class="section-kicker">个性化</p><h2 id="plan-controls-heading">计划偏好</h2></div>
+                </div>
+                <label>题量
+                  <select id="daily-count"><option value="3">3 题</option><option value="4">4 题</option><option value="5">5 题</option></select>
+                </label>
+                <label>训练强度
+                  <select id="daily-difficulty"><option value="standard">标准</option><option value="conservative">稳扎稳打</option><option value="intensive">高强度</option></select>
+                </label>
+                <label>目标标签
+                  <input id="daily-tags" type="text" placeholder="array, dp, graph" aria-label="目标标签，使用逗号分隔" />
+                </label>
+                <button id="import-catalog" class="secondary-action" type="button"><span data-icon="upload"></span>导入推荐题库</button>
+                <input id="catalog-file" type="file" accept="application/json,.json" hidden />
+              </section>
+            </aside>
           </div>
-          <div class="daily-controls">
-            <label>
-              题量
-              <select id="daily-count">
-                <option value="3">3 道</option>
-                <option value="4">4 道</option>
-                <option value="5">5 道</option>
-              </select>
-            </label>
-            <label>
-              难度压力
-              <select id="daily-difficulty">
-                <option value="standard">标准</option>
-                <option value="conservative">稳扎稳打</option>
-                <option value="intensive">高强度</option>
-              </select>
-            </label>
-            <label>
-              目标标签
-              <input id="daily-tags" type="text" aria-label="目标标签，使用逗号分隔" placeholder="array, dp, graph" />
-            </label>
-          </div>
-          <p id="daily-status" class="daily-status">导入推荐题库后，可以生成今日刷题计划。</p>
-          <div id="daily-list" class="daily-list"></div>
         </section>
 
-        <div class="content-grid">
-          <div class="left-stack">
-            <section class="problem-panel">
-              <h3>题目描述</h3>
-              <p id="problem-description"></p>
-            </section>
+        <section id="view-practice" class="app-view practice-view" data-view="practice" tabindex="-1" hidden>
+          <header class="practice-commandbar">
+            <div class="practice-identity">
+              <p id="eyebrow" class="eyebrow-copy">ACM RUNNER</p>
+              <h1 id="problem-title">选择一道题开始</h1>
+            </div>
+            <div class="practice-actions">
+              <a id="leetcode-link" class="command-button" href="#" target="_blank" rel="noreferrer"><span data-icon="external-link"></span><span>原题</span></a>
+              <button id="toggle-problem-inspector" class="command-button" type="button">题目</button>
+              <label class="command-select"><span>语言</span><select id="language"><option value="python">Python</option><option value="java">Java</option><option value="cpp">C++17</option></select></label>
+              <label class="command-select"><span>环境</span><select id="runner"><option value="local">本机</option><option value="docker">Docker</option></select></label>
+              <button id="run" class="run-button" type="button"><span data-icon="play"></span>运行</button>
+            </div>
+          </header>
 
-            <section class="io-panel">
-              <div class="io-head">
-                <h3>自测输入</h3>
-                <div class="io-actions">
-                  <button id="sample-io" type="button">题目样例</button>
-                  <button id="clear-expected" type="button">只看输出</button>
-                </div>
-              </div>
-              <label>
-                标准输入 stdin
-                <textarea id="stdin" spellcheck="false"></textarea>
-              </label>
-              <label>
-                自测预期输出（可选）
-                <textarea id="expected" spellcheck="false"></textarea>
-              </label>
-              <p class="hint">留空时只展示 stdout；填写后按 stdout 文本比对。</p>
-            </section>
+          <div id="daily-session" class="daily-session" aria-live="polite"></div>
+          <div class="mobile-practice-tabs" role="tablist" aria-label="练习区">
+            <button type="button" role="tab" data-mobile-practice-tab="problem" aria-selected="false">题目</button>
+            <button type="button" role="tab" data-mobile-practice-tab="code" aria-selected="true">代码</button>
+            <button type="button" role="tab" data-mobile-practice-tab="result" aria-selected="false">结果</button>
           </div>
 
-          <div class="right-stack">
-            <section class="runner-panel">
-              <div class="toolbar">
-                <label>
-                  语言
-                  <select id="language">
-                    <option value="python">Python</option>
-                    <option value="java">Java</option>
-                    <option value="cpp">C++17</option>
-                  </select>
-                </label>
-                <label>
-                  运行模式
-                  <select id="runner">
-                    <option value="local">本机环境</option>
-                    <option value="docker">Docker runner</option>
-                  </select>
-                </label>
-                <button id="load-template" type="button">还原初始代码</button>
-                <button id="run" type="button">Run</button>
-              </div>
-              <p id="runner-health" class="runner-health">检测运行环境...</p>
-              <label class="editor-label" for="code">代码</label>
+          <section id="problem-inspector" class="problem-inspector" data-mobile-practice-panel="problem" aria-label="题目描述">
+            <div class="section-heading compact"><div><p class="section-kicker">Problem</p><h2>题目描述</h2></div></div>
+            <p id="problem-description"></p>
+          </section>
+
+          <div class="practice-main">
+            <section class="editor-pane" data-mobile-practice-panel="code" aria-label="代码编辑器">
+              <header class="editor-header">
+                <strong>solution</strong>
+                <div><span id="runner-health" aria-live="polite">检测环境...</span><button id="load-template" class="text-button" type="button">还原初始代码</button></div>
+              </header>
               <div class="code-editor" id="code-editor">
                 <div id="line-numbers" class="line-numbers" aria-hidden="true">1</div>
                 <div class="code-scroll">
                   <pre id="code-highlight" aria-hidden="true"><code></code></pre>
-                  <textarea id="code" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea>
+                  <textarea id="code" aria-label="代码" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea>
                 </div>
               </div>
-              <details class="assist-panel">
-                <summary>模型建议（可选）</summary>
-                <div class="assist-settings">
-                  <label>
-                    API Key
-                    <input id="assist-key" type="password" placeholder="只保存在本机 data/memory/settings.json" />
-                  </label>
-                  <label>
-                    Base URL
-                    <input id="assist-base-url" type="url" placeholder="https://api.openai.com/v1" />
-                  </label>
-                  <label>
-                    Model
-                    <input id="assist-model" type="text" placeholder="gpt-4.1-mini" />
-                  </label>
-                  <button id="save-assist-settings" type="button" class="secondary">保存模型设置</button>
-                </div>
-                <label>
-                  想问模型什么
-                  <textarea id="assist-question" placeholder="请看一下我的代码，指出可能的问题和修改建议。" spellcheck="false"></textarea>
-                </label>
-                <button id="ask-assist" type="button">询问模型</button>
-                <pre id="assist-answer" class="assist-answer"></pre>
-              </details>
             </section>
 
-            <section class="result-panel">
-              <div class="result-head">
-                <h3>运行结果</h3>
-                <span id="status" class="status">IDLE</span>
+            <section class="utility-dock" data-mobile-practice-panel="result" aria-label="测试与运行结果">
+              <div class="utility-tabs" role="tablist" aria-label="工具面板">
+                <button type="button" role="tab" data-utility-tab="test" aria-selected="true">测试用例</button>
+                <button type="button" role="tab" data-utility-tab="result" aria-selected="false">运行结果</button>
+                <button type="button" role="tab" data-utility-tab="assist" aria-selected="false">AI 提示</button>
               </div>
-              <pre id="message"></pre>
-              <h4>自测输出 stdout</h4>
-              <pre id="stdout"></pre>
-              <h4>stderr</h4>
-              <pre id="stderr"></pre>
+              <section class="utility-panel" data-utility-panel="test">
+                <div class="io-actions"><button id="sample-io" type="button">载入题目样例</button><button id="clear-expected" type="button">只看输出</button></div>
+                <label>标准输入 stdin<textarea id="stdin" spellcheck="false"></textarea></label>
+                <label>自测预期输出（可选）<textarea id="expected" spellcheck="false"></textarea></label>
+              </section>
+              <section class="utility-panel result" data-utility-panel="result" hidden>
+                <div class="result-heading"><span>执行状态</span><strong id="status">IDLE</strong></div>
+                <pre id="message" aria-live="polite"></pre>
+                <h3>stdout</h3><pre id="stdout"></pre>
+                <h3>stderr</h3><pre id="stderr"></pre>
+              </section>
+              <section class="utility-panel assist assist-panel" data-utility-panel="assist" hidden>
+                <label>想问模型什么？<textarea id="assist-question" placeholder="请看一下我的代码，指出可能的问题和修改建议。" spellcheck="false"></textarea></label>
+                <div class="assist-actions"><button id="ask-assist" type="button">询问模型</button><button class="text-button" type="button" data-view-target="settings">模型设置</button></div>
+                <pre id="assist-answer" aria-live="polite"></pre>
+              </section>
             </section>
           </div>
-        </div>
+        </section>
+
+        <section id="view-library" class="app-view library-view" data-view="library" tabindex="-1" hidden>
+          <header class="view-heading">
+            <div><p class="eyebrow-copy">LIBRARY</p><h1 id="library-title">我的题库</h1><p class="view-description">你导入或加入练习的题目，独立于推荐题库保存。</p></div>
+            <div class="heading-actions"><button id="import-problems" class="secondary-action" type="button"><span data-icon="upload"></span>导入</button><button id="export-problems" class="secondary-action" type="button"><span data-icon="download"></span>导出</button></div>
+          </header>
+          <input id="import-file" type="file" accept="application/json,.json" hidden />
+          <div class="library-toolbar">
+            <label class="library-search"><span data-icon="search"></span><input id="search" type="search" placeholder="搜索题号、slug 或标签" /></label>
+            <button id="select-problems" type="button">选择题目</button>
+            <button id="delete-problems" class="danger-action" type="button" disabled hidden><span data-icon="trash-2"></span>删除选中</button>
+          </div>
+          <div id="problem-list" class="problem-list"></div>
+        </section>
+
+        <section id="view-catalog" class="app-view catalog-view" data-view="catalog" tabindex="-1" hidden>
+          <header class="view-heading">
+            <div><p class="eyebrow-copy">CATALOG</p><h1 id="catalog-title">推荐题库</h1><p class="view-description">用于生成每日计划的只读高频题池。</p></div>
+            <button id="catalog-import" class="secondary-action" type="button"><span data-icon="upload"></span>导入题库</button>
+          </header>
+          <p id="catalog-status" class="catalog-status" aria-live="polite">正在读取推荐题库...</p>
+          <div id="catalog-list" class="catalog-list"></div>
+        </section>
+
+        <section id="view-settings" class="app-view settings-view" data-view="settings" tabindex="-1" hidden>
+          <header class="view-heading"><div><p class="eyebrow-copy">SETTINGS</p><h1 id="settings-title">设置</h1><p class="view-description">运行与模型配置只保存在本机。</p></div></header>
+          <div class="settings-layout">
+            <section class="settings-section" aria-labelledby="model-settings-heading">
+              <div class="section-heading"><div><p class="section-kicker">AI ASSIST</p><h2 id="model-settings-heading">模型连接</h2></div></div>
+              <label>API Key<input id="assist-key" type="password" autocomplete="off" placeholder="仅保存在本机设置文件" /></label>
+              <label>Base URL<input id="assist-base-url" type="url" placeholder="https://api.openai.com/v1" /></label>
+              <label>Model<input id="assist-model" type="text" placeholder="gpt-4.1-mini" /></label>
+              <button id="save-assist-settings" class="primary-action" type="button">保存模型设置</button>
+            </section>
+            <section class="settings-section" aria-labelledby="data-settings-heading">
+              <div class="section-heading"><div><p class="section-kicker">LOCAL DATA</p><h2 id="data-settings-heading">本地数据</h2></div></div>
+              <p>题目、代码缓存和练习进度均保存在当前项目的本地数据目录。</p>
+              <div class="settings-actions"><button id="settings-import-problems" class="secondary-action" type="button"><span data-icon="upload"></span>导入我的题库</button><button id="settings-export-problems" class="secondary-action" type="button"><span data-icon="download"></span>导出我的题库</button></div>
+            </section>
+          </div>
+        </section>
       </section>
     </main>
+
+    <nav id="mobile-navigation" class="mobile-nav" aria-label="移动端主要功能">
+      <button type="button" class="is-active" data-view-target="today"><span data-icon="home"></span><span>今日</span></button>
+      <button type="button" data-view-target="practice"><span data-icon="code-2"></span><span>练习</span></button>
+      <button type="button" data-view-target="library"><span data-icon="library-big"></span><span>题库</span></button>
+      <button id="mobile-more-toggle" type="button" aria-expanded="false"><span data-icon="settings"></span><span>更多</span></button>
+    </nav>
+    <div id="mobile-more-menu" class="mobile-more-menu" hidden>
+      <button type="button" data-view-target="catalog"><span data-icon="sparkles"></span>推荐题库</button>
+      <button type="button" data-view-target="settings"><span data-icon="settings"></span>设置</button>
+    </div>
 
     <script type="module" src="/app.js"></script>
   </body>
