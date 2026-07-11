@@ -24,6 +24,6 @@
 ### Task 4: Submission and Verification
 
 - [x] Run the complete test suite in the development worktree.
-- [ ] Synchronize only reviewed source, tests, Compose, and documentation into the submission repository.
-- [ ] Run the complete test suite in the submission repository.
-- [ ] Confirm the existing host service still reports host mode and serves the latest Web code.
+- [x] Synchronize only reviewed source, tests, Compose, and documentation into the submission repository.
+- [x] Run the complete test suite in the submission repository.
+- [x] Confirm the existing host service still reports host mode and serves the latest Web code.
