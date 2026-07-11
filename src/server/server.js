@@ -37,6 +37,7 @@ import {
   loadMemoryPages,
   saveMemoryPage,
 } from "./memory.js";
+import { fetchLeetCodeQuestionPage } from "./leetcode-question.js";
 import {
   buildPracticeProfile,
   getDefaultPlannerProfileFile,
@@ -156,19 +157,35 @@ function todayDate(value) {
   return date ? date.slice(0, 10) : localDateString();
 }
 
-function memoryPageFromPlanItem(item) {
-  return {
-    source: "leetcode",
-    url: item.leetcodeUrl,
-    slug: item.leetcodeSlug,
-    frontendId: "",
-    title: item.title || item.leetcodeSlug,
-    difficulty: item.difficulty || "",
-    tags: Array.isArray(item.tags) ? item.tags : [],
-    sample: null,
-    content: `Open the LeetCode link for the full statement. ACMCoder stores only recommendation metadata for ${item.title || item.leetcodeSlug}.`,
-    capturedAt: new Date().toISOString(),
-  };
+function hasCompleteStatement(page) {
+  const content = String(page?.content || "").trim();
+  return Boolean(content) && !content.startsWith("Open the LeetCode link for the full statement.");
+}
+
+async function resolvePracticePage(item, { memoryFile, fetchLeetCodePage }) {
+  const pages = await loadMemoryPages({ slug: item.leetcodeSlug }, memoryFile);
+  const latestPage = pages.at(-1);
+  const cachedPage = [...pages].reverse().find(hasCompleteStatement);
+
+  if (cachedPage) {
+    return {
+      page:
+        latestPage === cachedPage
+          ? cachedPage
+          : {
+              ...cachedPage,
+              capturedAt: new Date().toISOString(),
+            },
+      shouldSave: latestPage !== cachedPage,
+    };
+  }
+
+  const page = await fetchLeetCodePage(item.leetcodeSlug, item.leetcodeUrl);
+  if (!hasCompleteStatement(page)) {
+    throw new Error(`无法获取 ${item.title || item.leetcodeSlug} 的完整题面，请打开原题后重试。`);
+  }
+
+  return { page, shouldSave: true };
 }
 
 async function buildDailyPlannerInputs({ recommendationCatalogFile, plannerProfileFile, progressFile, options = {} }) {
@@ -233,6 +250,9 @@ export function createAcmcoderServer(options = {}) {
   const dailyPlanFile = options.dailyPlanFile || getDefaultDailyPlanFile();
   const runSubmission = options.runSubmission || defaultRunSubmission;
   const assistFetch = options.assistFetch || globalThis.fetch;
+  const fetchLeetCodePage =
+    options.fetchLeetCodePage ||
+    ((slug, url) => fetchLeetCodeQuestionPage(slug, url, { fetch: options.leetcodeFetch || globalThis.fetch }));
   const listLanguages = options.listLanguages || defaultListLanguages;
   const checkToolchain = options.checkToolchain || defaultCheckToolchain;
   const checkDockerRunner = options.checkDockerRunner || defaultCheckDockerRunner;
@@ -299,17 +319,23 @@ export function createAcmcoderServer(options = {}) {
         const body = await readJsonBody(request);
         const date = todayDate(body.date);
         const action = String(body.action || "");
-        let plan = await updateDailyPlanItemAction({ planFile: dailyPlanFile, date, slug, action });
-        await updatePlannerAction(slug, action, plannerProfileFile);
 
         if (action === "add_to_practice") {
-          const item = plan.items.find((entry) => entry.leetcodeSlug === slug);
-          if (item) {
-            await saveMemoryPage(memoryPageFromPlanItem(item), memoryFile, currentMemoryFile);
+          const currentPlan = await loadDailyPlan(date, dailyPlanFile);
+          const item = currentPlan?.items?.find((entry) => entry.leetcodeSlug === slug);
+          if (!item) {
+            throw new Error(`今日计划中没有题目 ${slug}。`);
+          }
+
+          const resolved = await resolvePracticePage(item, { memoryFile, fetchLeetCodePage });
+          if (resolved.shouldSave) {
+            await saveMemoryPage(resolved.page, memoryFile, currentMemoryFile);
           }
         }
 
-        plan = await loadDailyPlan(date, dailyPlanFile);
+        await updateDailyPlanItemAction({ planFile: dailyPlanFile, date, slug, action });
+        await updatePlannerAction(slug, action, plannerProfileFile);
+        const plan = await loadDailyPlan(date, dailyPlanFile);
         sendJson(response, 200, { plan });
         return;
       }

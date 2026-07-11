@@ -1301,20 +1301,16 @@ async function recordDailyAction(slug, action) {
     return;
   }
 
-  if (action === "practice") {
-    await openPracticeForRecommendation(slug);
-    return;
-  }
-
+  const apiAction = action === "practice" ? "add_to_practice" : action;
   const body = await getJson(`/api/daily-plan/items/${encodeURIComponent(slug)}/action`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
     },
-    body: JSON.stringify({ action }),
+    body: JSON.stringify({ action: apiAction }),
   });
   renderDailyPlan(body.plan);
-  if (action === "add_to_practice") {
+  if (apiAction === "add_to_practice") {
     await reloadProblems({ preserveView: true });
     await openPracticeForRecommendation(slug);
   }

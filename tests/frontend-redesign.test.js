@@ -182,6 +182,8 @@ test("today view reports accepted progress and opens recommendations in practice
   assert.match(script, /打开原题/);
   assert.match(script, /加入并练习/);
   assert.match(script, /memory:\$\{slug\}/);
+  assert.match(script, /const apiAction = action === "practice" \? "add_to_practice" : action/);
+  assert.match(script, /body: JSON\.stringify\(\{ action: apiAction \}\)/);
   assert.match(script, /setActiveView\("practice"\)/);
 });
 
