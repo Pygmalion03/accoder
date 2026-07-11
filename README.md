@@ -1,6 +1,8 @@
 # ACMCoder
 
-ACMCoder 是一个面向 LeetCode 侧栏练习的本地 ACM 练习器：题面继续在 LeetCode 页面看，代码、自测输入、运行结果、AC 记录和本地记忆放在 ACMCoder 里处理。
+ACMCoder 是一个面向 LeetCode 侧栏练习的本地 ACM 练习器：代码、自测输入、运行结果、AC 记录和个人题库都在本机处理，加入练习的题目也可以在 Web 工作台查看完整题面。
+
+当前稳定版为 `v3.0.0`。
 
 它有两个主要入口：
 
@@ -85,8 +87,8 @@ docker compose -f docker-compose.prebuilt.yml up -d
 如果你在 Compose 文件里固定了镜像 tag，把 tag 更新到当前版本：
 
 ```text
-ghcr.io/pygmalion03/acmcoder-app:v2.2.4
-ghcr.io/pygmalion03/acmcoder-runner:v2.2.4
+ghcr.io/pygmalion03/acmcoder-app:v3.0.0
+ghcr.io/pygmalion03/acmcoder-runner:v3.0.0
 ```
 
 ## 日常使用流程
@@ -96,7 +98,7 @@ ghcr.io/pygmalion03/acmcoder-runner:v2.2.4
 3. 点击 ACMCoder 扩展图标打开侧栏。
 4. 选择语言，按 ACM 输入输出协议补全代码。
 5. 填写 `stdin` 和可选预期输出，点击 `Run`。
-6. 需要管理记忆题目、导入导出或练内置种子题时，打开 `http://127.0.0.1:43117`。
+6. 打开 `http://127.0.0.1:43117`，可以管理个人题库和推荐题库，也可以生成每日计划后在完整练习页继续编程。
 
 ## 启动方式和运行模式
 
@@ -176,7 +178,7 @@ ACMCODER_DOCKER_AUTO_BUILD=0
 
 这个项目有三类发布物：
 
-- **源码分支**：例如 `v2.2`，包含代码、Dockerfile、Web、插件和文档。
+- **源码分支**：当前为 `v3`，包含代码、Dockerfile、Web、插件和文档。
 - **GitHub Release**：面向用户看的版本页，说明 tag、变更和启动方式。
 - **GHCR Docker 镜像**：Docker 用户实际拉取的预构建镜像。
 
@@ -189,8 +191,8 @@ ghcr.io/pygmalion03/acmcoder-app:latest
 需要锁版本时使用当前 Release tag：
 
 ```text
-ghcr.io/pygmalion03/acmcoder-app:v2.2.4
-ghcr.io/pygmalion03/acmcoder-runner:v2.2.4
+ghcr.io/pygmalion03/acmcoder-app:v3.0.0
+ghcr.io/pygmalion03/acmcoder-runner:v3.0.0
 ```
 
 更多部署边界见 [`docs/deployment.md`](docs/deployment.md)。
@@ -201,14 +203,16 @@ ghcr.io/pygmalion03/acmcoder-runner:v2.2.4
 - 支持 Java、C++17、Python。
 - 支持本机运行、Docker runner 和 Docker app 内置环境。
 - 支持 Edge/Chrome 手动加载浏览器插件，在 LeetCode 题目页打开侧栏练习。
-- 支持本地记忆题目、AC 次数、导入导出。
+- 支持个人题库、完整练习页、AC 次数、导入导出和批量删除。
 - 内置 30 道中文高频推荐题，支持推荐题库导入、导出、全选和批量删除。
-- 支持可选 OpenAI-compatible 模型建议，但不使用 LLM 作为判题器。
-- 不分发完整 LeetCode 题面，只保留题目索引、链接和自维护 ACM 协议。
+- 支持按题量、难度和标签生成每日计划；模型不可用时自动使用本地规则计划。
+- 支持可选 OpenAI-compatible 每日推荐和代码建议，但不使用 LLM 作为判题器。
+- 推荐题库只保存题目索引和 LeetCode 链接；加入个人题库时按需读取完整题面并保存在本机。
+- Web 工作台会同步插件新增题目和 AC 进度，同时保留当前代码、输入和选题。
 
 ## 模型建议和本地数据
 
-模型建议是可选能力，不参与判题，也不会覆盖源代码。用户可以在 Web 或插件里填写 API Key、Base URL 和 Model，服务端通过 OpenAI-compatible `chat/completions` 接口请求建议。
+模型能力是可选增强，不参与判题，也不会覆盖源代码。每日计划只允许模型从本地候选题中选择；模型不可用或返回内容不合法时，系统改用确定性的本地规则。用户也可以主动请求代码建议。API Key、Base URL 和 Model 都在本机配置，服务端通过 OpenAI-compatible `chat/completions` 接口请求结果。
 
 本地数据默认保存在：
 
@@ -229,6 +233,9 @@ GET  /api/memory/pages
 POST /api/memory/pages
 GET  /api/memory/export
 POST /api/problems/import
+GET  /api/recommendation/catalog
+POST /api/daily-plan/generate
+GET  /api/daily-plan/today
 POST /api/assist
 ```
 
@@ -247,4 +254,4 @@ extension                浏览器侧栏插件
 
 ## 后续
 
-当前优先级是保持 Docker app、浏览器插件和 GitHub Release 的同步可用。后面更值得补的是插件商店发布、更多题目贡献规范和更顺的一键安装体验。
+后面更值得补的是插件商店发布、更多题目贡献规范和更顺的一键安装体验。
