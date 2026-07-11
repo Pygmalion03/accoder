@@ -14,6 +14,14 @@ export function canonicalProblemSlug(problem) {
   return typeof slug === "string" ? slug.replace(/^memory:/, "") : "";
 }
 
+export function nextCatalogSelection(catalog = [], selectedSlugs = new Set()) {
+  const slugs = (Array.isArray(catalog) ? catalog : [])
+    .map((entry) => String(entry?.leetcodeSlug || "").trim())
+    .filter(Boolean);
+  const allSelected = slugs.length > 0 && slugs.every((slug) => selectedSlugs.has(slug));
+  return allSelected ? [] : slugs;
+}
+
 export function localDateForTimestamp(value) {
   if (value === null || value === undefined || (typeof value === "string" && value.trim() === "")) {
     return "";

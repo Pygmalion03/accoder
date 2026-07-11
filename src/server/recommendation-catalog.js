@@ -4,6 +4,7 @@ import path from "node:path";
 import { projectRoot } from "../core/problems.js";
 
 const defaultRecommendationCatalogFile = path.join(projectRoot, "data", "recommendation", "catalog.json");
+const bundledRecommendationCatalogFile = path.join(projectRoot, "data", "recommendation", "default-catalog.json");
 const difficultyMap = new Map([
   ["简单", "easy"],
   ["中等", "medium"],
@@ -85,6 +86,15 @@ function catalogSort(a, b) {
   );
 }
 
+function normalizeSlugs(slugs = []) {
+  return Array.from(new Set(slugs.map((slug) => String(slug).trim()).filter(Boolean)));
+}
+
+async function writeCatalog(catalog, catalogFile) {
+  await fs.mkdir(path.dirname(catalogFile), { recursive: true });
+  await fs.writeFile(catalogFile, JSON.stringify(catalog, null, 2), "utf8");
+}
+
 function entriesFromPayload(payload) {
   if (Array.isArray(payload)) {
     return payload;
@@ -127,16 +137,28 @@ export function normalizeCatalogEntry(entry, source = "", syncedAt = new Date().
   };
 }
 
-export async function loadRecommendationCatalog(catalogFile = defaultRecommendationCatalogFile) {
+async function readCatalogFile(catalogFile) {
+  const catalog = JSON.parse(await fs.readFile(catalogFile, "utf8"));
+  return {
+    version: 1,
+    importedAt: String(catalog?.importedAt ?? ""),
+    entries: Array.isArray(catalog?.entries) ? catalog.entries : [],
+  };
+}
+
+export async function loadRecommendationCatalog(
+  catalogFile = defaultRecommendationCatalogFile,
+  fallbackCatalogFile = path.resolve(catalogFile) === path.resolve(defaultRecommendationCatalogFile)
+    ? bundledRecommendationCatalogFile
+    : "",
+) {
   try {
-    const catalog = JSON.parse(await fs.readFile(catalogFile, "utf8"));
-    return {
-      version: 1,
-      importedAt: String(catalog?.importedAt ?? ""),
-      entries: Array.isArray(catalog?.entries) ? catalog.entries : [],
-    };
+    return await readCatalogFile(catalogFile);
   } catch (error) {
     if (error.code === "ENOENT") {
+      if (fallbackCatalogFile) {
+        return readCatalogFile(fallbackCatalogFile);
+      }
       return { version: 1, importedAt: "", entries: [] };
     }
 
@@ -167,11 +189,63 @@ export async function importRecommendationCatalog(
     entries: [...entriesBySlug.values()].sort(catalogSort),
   };
 
-  await fs.mkdir(path.dirname(catalogFile), { recursive: true });
-  await fs.writeFile(catalogFile, JSON.stringify(catalog, null, 2), "utf8");
+  await writeCatalog(catalog, catalogFile);
 
   return {
     importedCount: catalog.entries.length,
     catalog,
+  };
+}
+
+export async function exportRecommendationCatalog(
+  { slugs = [] } = {},
+  catalogFile = defaultRecommendationCatalogFile,
+  exportedAt = new Date().toISOString(),
+  fallbackCatalogFile,
+) {
+  const normalizedSlugs = normalizeSlugs(slugs);
+  const slugSet = normalizedSlugs.length > 0 ? new Set(normalizedSlugs) : null;
+  const catalog = await loadRecommendationCatalog(catalogFile, fallbackCatalogFile);
+
+  return {
+    format: "acmcoder-recommendation-catalog-v1",
+    exportedAt,
+    entries: slugSet
+      ? catalog.entries.filter((entry) => slugSet.has(entry.leetcodeSlug))
+      : catalog.entries,
+  };
+}
+
+export async function deleteRecommendationCatalogEntries(
+  { slugs = [] } = {},
+  catalogFile = defaultRecommendationCatalogFile,
+  changedAt = new Date().toISOString(),
+  fallbackCatalogFile,
+) {
+  const normalizedSlugs = normalizeSlugs(slugs);
+  if (normalizedSlugs.length === 0) {
+    throw new Error("Missing recommendation slugs.");
+  }
+
+  const slugSet = new Set(normalizedSlugs);
+  const catalog = await loadRecommendationCatalog(catalogFile, fallbackCatalogFile);
+  const deletedSlugSet = new Set();
+  const entries = catalog.entries.filter((entry) => {
+    if (slugSet.has(entry.leetcodeSlug)) {
+      deletedSlugSet.add(entry.leetcodeSlug);
+      return false;
+    }
+    return true;
+  });
+  const nextCatalog = {
+    version: 1,
+    importedAt: changedAt,
+    entries,
+  };
+
+  await writeCatalog(nextCatalog, catalogFile);
+  return {
+    deletedSlugs: normalizedSlugs.filter((slug) => deletedSlugSet.has(slug)),
+    catalog: nextCatalog,
   };
 }

@@ -5,6 +5,8 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  deleteRecommendationCatalogEntries,
+  exportRecommendationCatalog,
   importRecommendationCatalog,
   loadRecommendationCatalog,
 } from "../src/server/recommendation-catalog.js";
@@ -264,4 +266,130 @@ test("falls back to the payload source when entry source is whitespace", async (
   );
 
   assert.equal(result.catalog.entries[0].source, "codetop");
+});
+
+test("loads a bundled catalog when the runtime catalog does not exist", async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-catalog-"));
+  const runtimeFile = path.join(tempDir, "catalog.json");
+  const bundledFile = path.join(tempDir, "default-catalog.json");
+  await fs.writeFile(
+    bundledFile,
+    JSON.stringify({
+      version: 1,
+      importedAt: "2026-07-11T00:00:00.000Z",
+      entries: [
+        {
+          source: "内置高频题库",
+          sourceRank: 1,
+          leetcodeSlug: "two-sum",
+          title: "两数之和",
+          leetcodeUrl: "https://leetcode.cn/problems/two-sum/",
+          difficulty: "easy",
+          tags: ["数组", "哈希表"],
+          frequencyScore: 1,
+          lastSyncedAt: "2026-07-11T00:00:00.000Z",
+        },
+      ],
+    }),
+    "utf8",
+  );
+
+  const catalog = await loadRecommendationCatalog(runtimeFile, bundledFile);
+
+  assert.equal(catalog.entries.length, 1);
+  assert.equal(catalog.entries[0].title, "两数之和");
+});
+
+test("bundles thirty Chinese recommendation entries without full statements", async () => {
+  const bundledFile = path.resolve("data", "recommendation", "default-catalog.json");
+  const catalog = JSON.parse(await fs.readFile(bundledFile, "utf8"));
+
+  assert.equal(catalog.entries.length, 30);
+  assert.equal(new Set(catalog.entries.map((entry) => entry.leetcodeSlug)).size, 30);
+  for (const entry of catalog.entries) {
+    assert.match(entry.title, /[\u4e00-\u9fff]/);
+    assert.equal(entry.source, "内置高频题库");
+    assert.equal(entry.tags.length > 0, true);
+    assert.equal(entry.tags.every((tag) => /[\u4e00-\u9fff]/.test(tag)), true);
+    assert.equal("content" in entry, false);
+    assert.equal("sample" in entry, false);
+  }
+});
+
+test("exports all or selected recommendation entries in an import-compatible format", async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-catalog-"));
+  const catalogFile = path.join(tempDir, "catalog.json");
+  await importRecommendationCatalog(
+    {
+      source: "内置高频题库",
+      entries: [
+        {
+          leetcodeSlug: "two-sum",
+          title: "两数之和",
+          leetcodeUrl: "https://leetcode.cn/problems/two-sum/",
+          frequencyScore: 1,
+        },
+        {
+          leetcodeSlug: "lru-cache",
+          title: "LRU 缓存",
+          leetcodeUrl: "https://leetcode.cn/problems/lru-cache/",
+          frequencyScore: 0.9,
+        },
+      ],
+    },
+    catalogFile,
+    "2026-07-11T01:00:00.000Z",
+  );
+
+  const all = await exportRecommendationCatalog({}, catalogFile, "2026-07-11T02:00:00.000Z");
+  const selected = await exportRecommendationCatalog(
+    { slugs: ["lru-cache"] },
+    catalogFile,
+    "2026-07-11T02:00:00.000Z",
+  );
+
+  assert.equal(all.format, "acmcoder-recommendation-catalog-v1");
+  assert.equal(all.exportedAt, "2026-07-11T02:00:00.000Z");
+  assert.equal(all.entries.length, 2);
+  assert.deepEqual(selected.entries.map((entry) => entry.leetcodeSlug), ["lru-cache"]);
+});
+
+test("deletes selected entries and persists an explicitly empty runtime catalog", async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-catalog-"));
+  const runtimeFile = path.join(tempDir, "catalog.json");
+  const bundledFile = path.join(tempDir, "default-catalog.json");
+  await fs.writeFile(
+    bundledFile,
+    JSON.stringify({
+      version: 1,
+      importedAt: "2026-07-11T00:00:00.000Z",
+      entries: [
+        {
+          source: "内置高频题库",
+          sourceRank: 1,
+          leetcodeSlug: "two-sum",
+          title: "两数之和",
+          leetcodeUrl: "https://leetcode.cn/problems/two-sum/",
+          difficulty: "easy",
+          tags: ["数组"],
+          frequencyScore: 1,
+          lastSyncedAt: "2026-07-11T00:00:00.000Z",
+        },
+      ],
+    }),
+    "utf8",
+  );
+
+  const result = await deleteRecommendationCatalogEntries(
+    { slugs: ["two-sum"] },
+    runtimeFile,
+    "2026-07-11T03:00:00.000Z",
+    bundledFile,
+  );
+  const loaded = await loadRecommendationCatalog(runtimeFile, bundledFile);
+
+  assert.deepEqual(result.deletedSlugs, ["two-sum"]);
+  assert.deepEqual(result.catalog.entries, []);
+  assert.equal(loaded.importedAt, "2026-07-11T03:00:00.000Z");
+  assert.deepEqual(loaded.entries, []);
 });

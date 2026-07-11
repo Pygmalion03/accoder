@@ -53,6 +53,8 @@ import {
   withProblemProgress,
 } from "./progress.js";
 import {
+  deleteRecommendationCatalogEntries,
+  exportRecommendationCatalog,
   getDefaultRecommendationCatalogFile,
   importRecommendationCatalog,
   loadRecommendationCatalog,
@@ -269,6 +271,20 @@ export function createAcmcoderServer(options = {}) {
       if (request.method === "GET" && requestUrl.pathname === "/api/recommendation/catalog") {
         const catalog = await loadRecommendationCatalog(recommendationCatalogFile);
         sendJson(response, 200, { catalog });
+        return;
+      }
+
+      if (request.method === "GET" && requestUrl.pathname === "/api/recommendation/export") {
+        const slugs = (requestUrl.searchParams.get("slugs") || "").split(",");
+        const body = await exportRecommendationCatalog({ slugs }, recommendationCatalogFile);
+        sendJsonDownload(response, `acmcoder-recommendations-${new Date().toISOString().slice(0, 10)}.json`, body);
+        return;
+      }
+
+      if (request.method === "DELETE" && requestUrl.pathname === "/api/recommendation/catalog") {
+        const body = await readJsonBody(request);
+        const result = await deleteRecommendationCatalogEntries({ slugs: body.slugs || [] }, recommendationCatalogFile);
+        sendJson(response, 200, result);
         return;
       }
 

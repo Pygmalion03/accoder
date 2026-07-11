@@ -103,7 +103,7 @@
                   <select id="daily-difficulty"><option value="standard">标准</option><option value="conservative">稳扎稳打</option><option value="intensive">高强度</option></select>
                 </label>
                 <label>目标标签
-                  <input id="daily-tags" type="text" placeholder="array, dp, graph" aria-label="目标标签，使用逗号分隔" />
+                  <input id="daily-tags" type="text" placeholder="数组、动态规划、图" aria-label="目标标签，使用逗号分隔" />
                 </label>
                 <button id="import-catalog" class="secondary-action" type="button" aria-label="导入推荐题库"><span data-icon="upload"></span>导入推荐题库</button>
                 <input id="catalog-file" type="file" accept="application/json,.json" hidden />
@@ -196,10 +196,15 @@
 
         <section id="view-catalog" class="app-view catalog-view" data-view="catalog" tabindex="-1" hidden>
           <header class="view-heading">
-            <div><p class="eyebrow-copy">CATALOG</p><h1 id="catalog-title">推荐题库</h1><p class="view-description">用于生成每日计划的只读高频题池。</p></div>
-            <button id="catalog-import" class="secondary-action" type="button" aria-label="导入推荐题库"><span data-icon="upload"></span>导入题库</button>
+            <div><p class="eyebrow-copy">CATALOG</p><h1 id="catalog-title">推荐题库</h1><p class="view-description">用于生成每日计划的高频题池，与我的题库分开管理。</p></div>
+            <div class="heading-actions"><button id="catalog-import" class="secondary-action" type="button" aria-label="导入推荐题库"><span data-icon="upload"></span>导入</button><button id="catalog-export" class="secondary-action" type="button" aria-label="导出推荐题库"><span data-icon="download"></span>导出全部</button></div>
           </header>
-          <p id="catalog-status" class="catalog-status" aria-live="polite">正在读取推荐题库...</p>
+          <div class="catalog-toolbar">
+            <p id="catalog-status" class="catalog-status" aria-live="polite">正在读取推荐题库...</p>
+            <button id="catalog-select" type="button">选择题目</button>
+            <button id="catalog-select-all" type="button" hidden>全选</button>
+            <button id="catalog-delete" class="danger-action" type="button" disabled hidden><span data-icon="trash-2"></span>删除选中</button>
+          </div>
           <div id="catalog-list" class="catalog-list"></div>
         </section>
 

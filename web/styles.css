@@ -334,6 +334,7 @@ svg {
 .run-button,
 .danger-action,
 .library-toolbar > button,
+.catalog-toolbar > button,
 .io-actions button,
 .assist-actions button,
 .text-button {
@@ -373,6 +374,7 @@ svg {
 .secondary-action,
 .command-button,
 .library-toolbar > button,
+.catalog-toolbar > button,
 .io-actions button,
 .text-button {
   border: 1px solid var(--border);
@@ -383,6 +385,7 @@ svg {
 .secondary-action:hover,
 .command-button:hover,
 .library-toolbar > button:hover,
+.catalog-toolbar > button:hover,
 .io-actions button:hover,
 .text-button:hover {
   border-color: var(--border-strong);
@@ -978,12 +981,20 @@ textarea {
   margin: 0 auto;
 }
 
-.library-toolbar {
+.library-toolbar,
+.catalog-toolbar {
   display: flex;
   align-items: center;
   gap: 8px;
   max-width: 1280px;
   margin: 0 auto 18px;
+}
+
+.catalog-status {
+  flex: 1 1 auto;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .library-search {
@@ -1080,13 +1091,6 @@ textarea {
   text-align: right;
 }
 
-.catalog-status {
-  max-width: 1280px;
-  margin: -20px auto 18px;
-  color: var(--muted);
-  font-size: 12px;
-}
-
 .catalog-item {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr) 110px 36px;
@@ -1095,6 +1099,14 @@ textarea {
   min-height: 68px;
   padding: 11px 8px;
   border-bottom: 1px solid var(--border);
+}
+
+.catalog-item.is-selecting {
+  grid-template-columns: 32px 56px minmax(0, 1fr) 110px 36px;
+}
+
+.catalog-item.is-selected {
+  background: rgba(39, 112, 91, .06);
 }
 
 .catalog-rank {
@@ -1419,7 +1431,8 @@ textarea {
     display: none;
   }
 
-  .library-toolbar {
+  .library-toolbar,
+  .catalog-toolbar {
     flex-wrap: wrap;
   }
 
@@ -1440,6 +1453,10 @@ textarea {
   .catalog-item {
     grid-template-columns: 44px minmax(0, 1fr) 36px;
     gap: 10px;
+  }
+
+  .catalog-item.is-selecting {
+    grid-template-columns: 28px 44px minmax(0, 1fr) 36px;
   }
 
   .catalog-source {

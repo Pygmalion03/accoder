@@ -114,6 +114,58 @@ test("imports recommendation catalog and lists catalog entries", async () => {
   }
 });
 
+test("exports and batch deletes recommendation catalog entries", async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-daily-api-"));
+  const server = createAcmcoderServer({
+    recommendationCatalogFile: tempFile(tempDir, "catalog.json"),
+    plannerProfileFile: tempFile(tempDir, "planner-profile.json"),
+    dailyPlanFile: tempFile(tempDir, "daily-plans.json"),
+  });
+  const port = await listen(server);
+
+  try {
+    await fetch(`http://127.0.0.1:${port}/api/recommendation/import`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        format: "acmcoder-recommendation-catalog-v1",
+        entries: [
+          twoSumRecommendation,
+          {
+            leetcodeSlug: "lru-cache",
+            title: "LRU 缓存",
+            leetcodeUrl: "https://leetcode.cn/problems/lru-cache/",
+            difficulty: "medium",
+            tags: ["哈希表", "链表"],
+            frequencyScore: 0.9,
+          },
+        ],
+      }),
+    });
+
+    const exportResponse = await fetch(
+      `http://127.0.0.1:${port}/api/recommendation/export?slugs=lru-cache`,
+    );
+    const exportBody = await exportResponse.json();
+    assert.equal(exportResponse.status, 200);
+    assert.match(exportResponse.headers.get("content-disposition") || "", /attachment/);
+    assert.equal(exportBody.format, "acmcoder-recommendation-catalog-v1");
+    assert.deepEqual(exportBody.entries.map((entry) => entry.leetcodeSlug), ["lru-cache"]);
+
+    const deleteResponse = await fetch(`http://127.0.0.1:${port}/api/recommendation/catalog`, {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ slugs: ["lru-cache"] }),
+    });
+    const deleteBody = await deleteResponse.json();
+    assert.equal(deleteResponse.status, 200);
+    assert.deepEqual(deleteBody.deletedSlugs, ["lru-cache"]);
+    assert.deepEqual(deleteBody.catalog.entries.map((entry) => entry.leetcodeSlug), ["two-sum"]);
+  } finally {
+    server.close();
+  }
+});
+
 test("generates today daily plan through the local API with fallback when no model key exists", async () => {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "acmcoder-daily-api-"));
   const server = createAcmcoderServer({

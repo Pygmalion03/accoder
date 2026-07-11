@@ -7,6 +7,7 @@ import {
   UTILITY_TABS,
   canonicalProblemSlug,
   dailyPlanProgress,
+  nextCatalogSelection,
   normalizeUtilityTab,
   normalizeView,
 } from "../web/view-state.js";
@@ -52,6 +53,15 @@ test("calculates accepted progress for the plan date", () => {
 
   assert.deepEqual(dailyPlanProgress(plan, problems), { completed: 1, total: 3, percent: 33 });
   assert.deepEqual(dailyPlanProgress(null), { completed: 0, total: 0, percent: 0 });
+});
+
+test("toggles select all for recommendation catalog entries", () => {
+  const catalog = [{ leetcodeSlug: "two-sum" }, { leetcodeSlug: "lru-cache" }];
+
+  assert.deepEqual(nextCatalogSelection(catalog, new Set()), ["two-sum", "lru-cache"]);
+  assert.deepEqual(nextCatalogSelection(catalog, new Set(["two-sum"])), ["two-sum", "lru-cache"]);
+  assert.deepEqual(nextCatalogSelection(catalog, new Set(["two-sum", "lru-cache"])), []);
+  assert.deepEqual(nextCatalogSelection([], new Set()), []);
 });
 
 test("web UI has no runtime CDN or font URL dependencies", () => {
@@ -121,6 +131,13 @@ test("web UI preserves each behavior-bearing element ID exactly once", () => {
     "catalog-file",
     "daily-status",
     "daily-list",
+    "catalog-import",
+    "catalog-export",
+    "catalog-select",
+    "catalog-select-all",
+    "catalog-delete",
+    "catalog-status",
+    "catalog-list",
   ];
 
   for (const id of ids) {
@@ -163,6 +180,7 @@ test("web app wires the five-view workspace and utility tabs", () => {
 });
 
 test("web app keeps catalog and settings actions connected to existing local flows", () => {
+  const html = fs.readFileSync("web/index.html", "utf8");
   const script = fs.readFileSync("web/app.js", "utf8");
 
   assert.match(script, /settingsImportProblems/);
@@ -170,6 +188,13 @@ test("web app keeps catalog and settings actions connected to existing local flo
   assert.match(script, /catalogImport/);
   assert.match(script, /globalSearch/);
   assert.match(script, /api\/recommendation\/catalog/);
+  assert.match(script, /function updateCatalogActions\(/);
+  assert.match(script, /function toggleCatalogSelectAll\(/);
+  assert.match(script, /async function exportRecommendationCatalog\(/);
+  assert.match(script, /async function deleteSelectedCatalogEntries\(/);
+  assert.match(script, /nextCatalogSelection/);
+  assert.match(html, /placeholder="数组、动态规划、图"/);
+  assert.doesNotMatch(html, /只读高频题池/);
   assert.match(script, /reloadProblems\(\{ preserveView = false \} = \{\}\)/);
 });
 

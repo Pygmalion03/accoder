@@ -2,6 +2,7 @@ import { hydrateIcons, iconMarkup } from "./icons.js";
 import {
   canonicalProblemSlug,
   dailyPlanProgress,
+  nextCatalogSelection,
   normalizeUtilityTab,
   normalizeView,
 } from "./view-state.js";
@@ -16,6 +17,8 @@ const state = {
   runnerUserConfigured: false,
   dailyPlan: null,
   catalog: [],
+  catalogSelectionMode: false,
+  selectedCatalogSlugs: new Set(),
   activeView: "today",
   activeUtilityTab: "test",
   mobilePracticeTab: "code",
@@ -122,6 +125,10 @@ const elements = {
   dailyStatus: document.querySelector("#daily-status"),
   dailyList: document.querySelector("#daily-list"),
   catalogImport: document.querySelector("#catalog-import"),
+  catalogExport: document.querySelector("#catalog-export"),
+  catalogSelect: document.querySelector("#catalog-select"),
+  catalogSelectAll: document.querySelector("#catalog-select-all"),
+  catalogDelete: document.querySelector("#catalog-delete"),
   catalogStatus: document.querySelector("#catalog-status"),
   catalogList: document.querySelector("#catalog-list"),
   settingsImportProblems: document.querySelector("#settings-import-problems"),
@@ -1218,21 +1225,56 @@ async function importRecommendationCatalog(file) {
     body: JSON.stringify(payload),
   });
 
+  state.selectedCatalogSlugs.clear();
+  state.catalogSelectionMode = false;
   setDailyStatus(`已导入 ${body.importedCount || 0} 道推荐题。`, "ok");
   await loadRecommendationCatalog();
 }
 
+function selectedCatalogSlugsOrAll() {
+  if (state.selectedCatalogSlugs.size > 0) {
+    return [...state.selectedCatalogSlugs];
+  }
+  return state.catalog.map((entry) => entry.leetcodeSlug);
+}
+
+function updateCatalogActions() {
+  const selectedCount = state.selectedCatalogSlugs.size;
+  const allSelected = state.catalog.length > 0 && selectedCount === state.catalog.length;
+  elements.catalogSelect.textContent = state.catalogSelectionMode ? "完成选择" : "选择题目";
+  elements.catalogSelectAll.hidden = !state.catalogSelectionMode;
+  elements.catalogSelectAll.disabled = state.catalog.length === 0;
+  elements.catalogSelectAll.textContent = allSelected ? "取消全选" : "全选";
+  elements.catalogDelete.hidden = !state.catalogSelectionMode;
+  elements.catalogDelete.disabled = selectedCount === 0;
+  elements.catalogDelete.innerHTML = `${iconMarkup("trash-2")}${selectedCount > 0 ? `删除选中 (${selectedCount})` : "删除选中"}`;
+  elements.catalogExport.disabled = state.catalog.length === 0;
+  elements.catalogExport.innerHTML = `${iconMarkup("download")}${selectedCount > 0 ? `导出选中 (${selectedCount})` : "导出全部"}`;
+}
+
+function toggleCatalogSelectAll() {
+  state.selectedCatalogSlugs = new Set(nextCatalogSelection(state.catalog, state.selectedCatalogSlugs));
+  renderRecommendationCatalog();
+}
+
 function renderRecommendationCatalog() {
   elements.catalogList.innerHTML = "";
+  elements.catalogStatus.className = "catalog-status";
+  const availableSlugs = new Set(state.catalog.map((entry) => entry.leetcodeSlug));
+  state.selectedCatalogSlugs = new Set(
+    [...state.selectedCatalogSlugs].filter((slug) => availableSlugs.has(slug)),
+  );
   if (state.catalog.length === 0) {
     elements.catalogStatus.textContent = "推荐题库为空，请先导入题库文件。";
+    updateCatalogActions();
     return;
   }
 
-  elements.catalogStatus.textContent = `共 ${state.catalog.length} 道高频题，仅作为每日推荐来源。`;
+  elements.catalogStatus.textContent = `共 ${state.catalog.length} 道高频题，用于生成每日计划。`;
   for (const item of state.catalog) {
     const row = document.createElement("article");
-    row.className = "catalog-item";
+    const selected = state.selectedCatalogSlugs.has(item.leetcodeSlug);
+    row.className = `catalog-item${state.catalogSelectionMode ? " is-selecting" : ""}${selected ? " is-selected" : ""}`;
     const score = Math.round(Number(item.frequencyScore || 0) * 100);
     row.innerHTML = `
       <div class="catalog-rank">${Number.isFinite(item.sourceRank) && item.sourceRank < Number.MAX_SAFE_INTEGER ? `#${item.sourceRank}` : `${score}%`}</div>
@@ -1243,14 +1285,61 @@ function renderRecommendationCatalog() {
       <span class="catalog-source">${escapeHtml(item.source || "本地导入")}</span>
       <a class="icon-button" href="${escapeHtml(item.leetcodeUrl)}" target="_blank" rel="noreferrer" title="打开 LeetCode" aria-label="打开 LeetCode">${iconMarkup("external-link")}</a>
     `;
+    if (state.catalogSelectionMode) {
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.className = "memory-select catalog-select-box";
+      checkbox.checked = selected;
+      checkbox.setAttribute("aria-label", `选择 ${item.title || item.leetcodeSlug}`);
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) {
+          state.selectedCatalogSlugs.add(item.leetcodeSlug);
+          row.classList.add("is-selected");
+        } else {
+          state.selectedCatalogSlugs.delete(item.leetcodeSlug);
+          row.classList.remove("is-selected");
+        }
+        updateCatalogActions();
+      });
+      row.prepend(checkbox);
+    }
     elements.catalogList.appendChild(row);
   }
+  updateCatalogActions();
 }
 
 async function loadRecommendationCatalog() {
   const body = await getJson("/api/recommendation/catalog");
   state.catalog = Array.isArray(body.catalog?.entries) ? body.catalog.entries : [];
   renderRecommendationCatalog();
+}
+
+async function exportRecommendationCatalog() {
+  const slugs = selectedCatalogSlugsOrAll();
+  if (slugs.length === 0) {
+    return;
+  }
+
+  const query = `?slugs=${encodeURIComponent(slugs.join(","))}`;
+  const body = await getJson(`/api/recommendation/export${query}`);
+  downloadJson(`acmcoder-recommendations-${new Date().toISOString().slice(0, 10)}.json`, body);
+}
+
+async function deleteSelectedCatalogEntries() {
+  const slugs = [...state.selectedCatalogSlugs];
+  if (slugs.length === 0 || !window.confirm(`删除选中的 ${slugs.length} 道推荐题目？`)) {
+    return;
+  }
+
+  const body = await getJson("/api/recommendation/catalog", {
+    method: "DELETE",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ slugs }),
+  });
+  state.catalog = Array.isArray(body.catalog?.entries) ? body.catalog.entries : [];
+  state.selectedCatalogSlugs.clear();
+  renderRecommendationCatalog();
+  elements.catalogStatus.textContent = `已删除 ${body.deletedSlugs?.length || 0} 道推荐题。`;
 }
 
 async function loadTodayPlan() {
@@ -1516,6 +1605,26 @@ async function init() {
     elements.catalogFile.click();
   });
   elements.catalogImport.addEventListener("click", () => elements.catalogFile.click());
+  elements.catalogExport.addEventListener("click", () => {
+    exportRecommendationCatalog().catch((error) => {
+      elements.catalogStatus.textContent = error.message;
+      elements.catalogStatus.className = "catalog-status error";
+    });
+  });
+  elements.catalogSelect.addEventListener("click", () => {
+    state.catalogSelectionMode = !state.catalogSelectionMode;
+    if (!state.catalogSelectionMode) {
+      state.selectedCatalogSlugs.clear();
+    }
+    renderRecommendationCatalog();
+  });
+  elements.catalogSelectAll.addEventListener("click", toggleCatalogSelectAll);
+  elements.catalogDelete.addEventListener("click", () => {
+    deleteSelectedCatalogEntries().catch((error) => {
+      elements.catalogStatus.textContent = error.message;
+      elements.catalogStatus.className = "catalog-status error";
+    });
+  });
   elements.catalogFile.addEventListener("change", () => {
     importRecommendationCatalog(elements.catalogFile.files?.[0])
       .catch((error) => {
