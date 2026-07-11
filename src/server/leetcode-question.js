@@ -43,6 +43,7 @@ export function htmlToText(html) {
     .replace(/<\s*(script|style)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "")
     .replace(/<!--[^]*?-->/g, "")
     .replace(/<\s*br\s*\/?\s*>/gi, "\n")
+    .replace(/<\s*sup\b[^>]*>/gi, "^")
     .replace(/<\s*li\b[^>]*>/gi, "- ")
     .replace(/<\s*\/\s*(p|div|pre|li|ul|ol|h[1-6]|table|tr)\s*>/gi, "\n\n")
     .replace(/<[^>]+>/g, "")

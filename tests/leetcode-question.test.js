@@ -9,11 +9,12 @@ test("converts LeetCode statement HTML into readable plain text", () => {
     <p><strong>示例 1：</strong></p>
     <pre><strong>输入：</strong> nums = [2,7], target = 9<br><strong>输出：</strong> [0,1]</pre>
     <p>满足 2 &lt; 9 &amp;&amp; 7 &gt; 0。</p>
+    <p>长度不超过 10<sup>4</sup>，算法应优于 O(n<sup>2</sup>)。</p>
   `);
 
   assert.equal(
     text,
-    "给你一个整数数组 nums。\n\n示例 1：\n\n输入： nums = [2,7], target = 9\n输出： [0,1]\n\n满足 2 < 9 && 7 > 0。",
+    "给你一个整数数组 nums。\n\n示例 1：\n\n输入： nums = [2,7], target = 9\n输出： [0,1]\n\n满足 2 < 9 && 7 > 0。\n\n长度不超过 10^4，算法应优于 O(n^2)。",
   );
 });
 
