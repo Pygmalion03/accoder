@@ -27,20 +27,28 @@ test("web UI preserves LeetCode problem description line breaks", () => {
   assert.match(css, /overflow-wrap:\s*anywhere/);
 });
 
-test("web app polls current memory and persists workspace cache", () => {
+test("web app polls all memory metadata and persists workspace cache", () => {
   const script = fs.readFileSync("web/app.js", "utf8");
 
-  assert.match(script, /api\/memory\/current/);
+  assert.match(script, /syncMemoryPages/);
+  assert.match(script, /api\/memory\/pages/);
+  assert.doesNotMatch(script, /api\/memory\/current/);
   assert.match(script, /localStorage/);
   assert.match(script, /restoreWorkspaceCache/);
 });
 
-test("web app loads memory history without replacing active selection", () => {
+test("memory polling refreshes metadata without reselecting or reloading the workspace", () => {
   const script = fs.readFileSync("web/app.js", "utf8");
+  const syncBody = script.match(/async function syncMemoryPages[\s\S]*?\n\}/)?.[0] || "";
 
-  assert.match(script, /loadMemoryHistory/);
-  assert.match(script, /api\/memory\/pages/);
-  assert.match(script, /shouldSelectNewMemory/);
+  assert.match(syncBody, /memoryPagesVersion/);
+  assert.match(syncBody, /mergeMemoryProblems/);
+  assert.match(syncBody, /renderProblemList\(\)/);
+  assert.match(syncBody, /updateLibraryCount\(\)/);
+  assert.match(syncBody, /renderDailyProgress\(\)/);
+  assert.match(syncBody, /renderDailySession\(\)/);
+  assert.doesNotMatch(syncBody, /selectProblem\(/);
+  assert.doesNotMatch(syncBody, /loadTemplate\(/);
 });
 
 test("web app preserves captured metadata and checks sample IO before loading it", () => {

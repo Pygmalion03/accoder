@@ -4,6 +4,8 @@ import {
   dailyPlanProgress,
   apiRunnerForUiMode,
   isStaleLeetCodeSampleCache,
+  memoryPagesVersion,
+  mergeMemoryProblems,
   nextCatalogSelection,
   normalizeUtilityTab,
   normalizeView,
@@ -14,7 +16,7 @@ import {
 const state = {
   problems: [],
   selected: null,
-  lastMemoryCapturedAt: "",
+  memoryPagesVersion: "",
   selectionMode: false,
   selectedProblemIds: new Set(),
   environment: null,
@@ -905,17 +907,6 @@ function buildMemoryProblem(page) {
   };
 }
 
-function upsertMemoryProblem(page) {
-  const problem = buildMemoryProblem(page);
-  const existingIndex = state.problems.findIndex((item) => item.slug === problem.slug);
-  if (existingIndex >= 0) {
-    state.problems.splice(existingIndex, 1);
-  }
-  state.problems.unshift(problem);
-  state.lastMemoryCapturedAt = page.capturedAt || "";
-  return problem;
-}
-
 function latestMemoryPages(pages = []) {
   const latestBySlug = new Map();
 
@@ -935,26 +926,32 @@ function latestMemoryPages(pages = []) {
   return [...latestBySlug.values()].sort((a, b) => Date.parse(a.capturedAt || 0) - Date.parse(b.capturedAt || 0));
 }
 
-function shouldSelectNewMemory(problem, autoSelect) {
-  if (!autoSelect) {
-    return false;
-  }
-  if (!state.selected) {
-    return true;
-  }
-  return state.selected.slug === problem.slug;
-}
-
-async function loadMemoryHistory() {
+async function syncMemoryPages({ force = false } = {}) {
   const body = await getJson("/api/memory/pages");
   const pages = latestMemoryPages(body.pages || []);
+  const version = memoryPagesVersion(pages);
+  if (!force && version === state.memoryPagesVersion) {
+    return false;
+  }
 
-  for (const page of pages) {
-    upsertMemoryProblem(page);
+  const memoryProblems = pages.map(buildMemoryProblem).reverse();
+  state.problems = mergeMemoryProblems(state.problems, memoryProblems);
+  state.memoryPagesVersion = version;
+
+  const activeProblem = state.problems.find((problem) => problem.slug === state.selected?.slug);
+  if (activeProblem?.memorySource) {
+    state.selected = activeProblem;
+    elements.eyebrow.textContent = formatEyebrow(activeProblem);
+    elements.title.textContent = activeProblem.title;
+    elements.link.href = activeProblem.leetcode.url;
+    elements.description.textContent = activeProblem.description;
   }
 
   renderProblemList();
-  return pages.length > 0;
+  updateLibraryCount();
+  renderDailyProgress();
+  renderDailySession();
+  return true;
 }
 
 function formatEyebrow(problem) {
@@ -1433,10 +1430,7 @@ async function recordDailyAction(slug, action) {
 async function reloadProblems({ preserveView = false } = {}) {
   const body = await getJson("/api/problems");
   state.problems = body.problems;
-  await loadMemoryHistory().catch(() => false);
-  renderProblemList();
-  updateLibraryCount();
-  renderDailyProgress();
+  await syncMemoryPages({ force: true }).catch(() => false);
 
   if (!state.selected || !state.problems.some((problem) => problem.slug === state.selected.slug)) {
     const fallback = state.problems[0];
@@ -1523,22 +1517,6 @@ async function exportProblems() {
   const query = slugs.length > 0 ? `?slugs=${encodeURIComponent(slugs.join(","))}` : "";
   const body = await getJson(`/api/problems/export${query}`);
   downloadJson(`acmcoder-problems-${new Date().toISOString().slice(0, 10)}.json`, body);
-}
-
-async function loadCurrentMemory({ autoSelect = false } = {}) {
-  const body = await getJson("/api/memory/current");
-  if (!body.page?.slug || body.page.capturedAt === state.lastMemoryCapturedAt) {
-    return false;
-  }
-
-  const problem = upsertMemoryProblem(body.page);
-  renderProblemList();
-
-  if (shouldSelectNewMemory(problem, autoSelect)) {
-    await selectProblem(problem.slug);
-  }
-
-  return true;
 }
 
 async function init() {
@@ -1711,7 +1689,7 @@ async function init() {
   elements.code.addEventListener("keydown", handleEditorKeydown);
   elements.stdin.addEventListener("input", saveWorkspaceCache);
   elements.expected.addEventListener("input", saveWorkspaceCache);
-  await loadMemoryHistory().catch(() => false);
+  await syncMemoryPages({ force: true }).catch(() => false);
   await loadTodayPlan().catch(() => {
     renderDailyPlan(null);
   });
@@ -1725,9 +1703,8 @@ async function init() {
   if (fallback) {
     await selectProblem(fallback.slug, { openView: false });
   }
-  await loadCurrentMemory({ autoSelect: true }).catch(() => false);
   setInterval(() => {
-    loadCurrentMemory({ autoSelect: true }).catch(() => {});
+    syncMemoryPages().catch(() => {});
   }, 2000);
   setActiveView("today");
 }

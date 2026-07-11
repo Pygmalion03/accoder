@@ -36,6 +36,29 @@ export function nextCatalogSelection(catalog = [], selectedSlugs = new Set()) {
   return allSelected ? [] : slugs;
 }
 
+export function memoryPagesVersion(pages = []) {
+  const signatures = (Array.isArray(pages) ? pages : [])
+    .filter((page) => page?.slug)
+    .map((page) => {
+      const acCount = Number(page?.progress?.acCount || 0);
+      return [
+        String(page.slug),
+        String(page.capturedAt || ""),
+        Number.isFinite(acCount) && acCount > 0 ? acCount : 0,
+      ];
+    })
+    .sort(([slugA], [slugB]) => slugA.localeCompare(slugB));
+
+  return JSON.stringify(signatures);
+}
+
+export function mergeMemoryProblems(existingProblems = [], memoryProblems = []) {
+  const seeds = (Array.isArray(existingProblems) ? existingProblems : []).filter(
+    (problem) => !problem?.memorySource,
+  );
+  return [...(Array.isArray(memoryProblems) ? memoryProblems : []), ...seeds];
+}
+
 export function sampleIoForProblem(problem) {
   if (problem?.memorySource) {
     return {

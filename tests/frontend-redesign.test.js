@@ -9,6 +9,8 @@ import {
   canonicalProblemSlug,
   dailyPlanProgress,
   isStaleLeetCodeSampleCache,
+  memoryPagesVersion,
+  mergeMemoryProblems,
   nextCatalogSelection,
   normalizeUtilityTab,
   normalizeView,
@@ -75,6 +77,28 @@ test("toggles select all for recommendation catalog entries", () => {
   assert.deepEqual(nextCatalogSelection(catalog, new Set(["two-sum"])), ["two-sum", "lru-cache"]);
   assert.deepEqual(nextCatalogSelection(catalog, new Set(["two-sum", "lru-cache"])), []);
   assert.deepEqual(nextCatalogSelection([], new Set()), []);
+});
+
+test("versions memory pages by slug capture time and accepted count", () => {
+  const pages = [
+    { slug: "two-sum", capturedAt: "2026-07-11T10:00:00Z", progress: { acCount: 0 } },
+    { slug: "lru-cache", capturedAt: "2026-07-11T11:00:00Z", progress: { acCount: 2 } },
+  ];
+  const reordered = [pages[1], pages[0]];
+  const acceptedAgain = [pages[0], { ...pages[1], progress: { acCount: 3 } }];
+  const recaptured = [{ ...pages[0], capturedAt: "2026-07-11T12:00:00Z" }, pages[1]];
+
+  assert.equal(memoryPagesVersion(pages), memoryPagesVersion(reordered));
+  assert.notEqual(memoryPagesVersion(pages), memoryPagesVersion(acceptedAgain));
+  assert.notEqual(memoryPagesVersion(pages), memoryPagesVersion(recaptured));
+});
+
+test("replaces the memory slice while preserving seed problems", () => {
+  const seed = { slug: "a-plus-b", source: "seed" };
+  const oldMemory = { slug: "memory:old", memorySource: true };
+  const nextMemory = [{ slug: "memory:two-sum", memorySource: true }];
+
+  assert.deepEqual(mergeMemoryProblems([oldMemory, seed], nextMemory), [...nextMemory, seed]);
 });
 
 test("does not treat a captured LeetCode example as executable ACM input", () => {
