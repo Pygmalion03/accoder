@@ -18,7 +18,8 @@ test("docker compose exposes the web server and shares the complete local data d
   const compose = fs.readFileSync("docker-compose.yml", "utf8");
 
   assert.match(compose, /Dockerfile\.app/);
-  assert.match(compose, /43117:43117/);
+  assert.match(compose, /127\.0\.0\.1:43117:43117/);
+  assert.doesNotMatch(compose, /^\s*-\s*["']?43117:43117["']?\s*$/m);
   assert.match(compose, /\.\/data:\/app\/data/);
   assert.doesNotMatch(compose, /\.\/data\/memory:\/app\/data\/memory/);
 });
@@ -39,7 +40,8 @@ test("prebuilt compose pulls the full-language app image without local build", (
   const compose = fs.readFileSync("docker-compose.prebuilt.yml", "utf8");
 
   assert.match(compose, /ghcr\.io\/pygmalion03\/acmcoder-app:latest/);
-  assert.match(compose, /43117:43117/);
+  assert.match(compose, /127\.0\.0\.1:43117:43117/);
+  assert.doesNotMatch(compose, /^\s*-\s*["']?43117:43117["']?\s*$/m);
   assert.match(compose, /\.\/data:\/app\/data/);
   assert.doesNotMatch(compose, /\.\/data\/memory:\/app\/data\/memory/);
   assert.doesNotMatch(compose, /\bbuild:/);

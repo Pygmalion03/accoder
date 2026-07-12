@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile.app
     image: acmcoder-app:local
     ports:
-      - "43117:43117"
+      - "127.0.0.1:43117:43117"
     volumes:
       - ./data:/app/data
     environment:
