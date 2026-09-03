@@ -7,9 +7,19 @@ import path from "node:path";
 import {
   deleteRecommendationCatalogEntries,
   exportRecommendationCatalog,
+  getBundledRecommendationCatalogFile,
   importRecommendationCatalog,
   loadRecommendationCatalog,
 } from "../src/server/recommendation-catalog.js";
+
+test("allows Docker deployments to keep bundled recommendations outside a mounted data directory", () => {
+  assert.equal(
+    getBundledRecommendationCatalogFile({
+      ACMCODER_BUNDLED_RECOMMENDATION_CATALOG_FILE: "/app/bundled-data/recommendation/default-catalog.json",
+    }),
+    "/app/bundled-data/recommendation/default-catalog.json",
+  );
+});
 
 test("imports CodeTop-style recommendation entries into a local catalog", async () => {
   const catalogFile = path.join(

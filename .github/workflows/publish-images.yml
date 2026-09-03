@@ -19,7 +19,53 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Build app image for smoke test
+        run: docker build --file Dockerfile.app --tag acmcoder-app:verify .
+
+      - name: Start hardened app container
+        run: |
+          mkdir -p .ci-data
+          chmod 0777 .ci-data
+          docker run --detach \
+            --name acmcoder-app-verify \
+            --read-only \
+            --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            --pids-limit 256 \
+            --memory 2g \
+            --cpus 2 \
+            --tmpfs /tmp:rw,exec,nosuid,nodev,size=512m \
+            --volume "$PWD/.ci-data:/app/data" \
+            --publish 127.0.0.1:43117:43117 \
+            acmcoder-app:verify
+
+      - name: Smoke test app image
+        run: node scripts/smoke-app-image.mjs
+
+      - name: Show app logs on failure
+        if: failure()
+        run: docker logs acmcoder-app-verify
+
+      - name: Stop smoke container
+        if: always()
+        run: docker rm --force acmcoder-app-verify || true
+
   publish:
+    needs: verify
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

@@ -11,6 +11,7 @@ test("repository includes a Docker app image for zero-local-toolchain users", ()
   assert.match(dockerfile, /python3/);
   assert.match(dockerfile, /ACMCODER_HOST=0\.0\.0\.0/);
   assert.match(dockerfile, /ACMCODER_DEPLOYMENT_MODE=docker-app/);
+  assert.match(dockerfile, /ACMCODER_BUNDLED_RECOMMENDATION_CATALOG_FILE=\/app\/bundled-data\/recommendation\/default-catalog\.json/);
   assert.match(dockerfile, /bin\/acmcoder\.js/);
 });
 
@@ -34,6 +35,11 @@ test("repository publishes prebuilt full-language app and runner images through 
   assert.match(workflow, /name:\s*app[\s\S]*dockerfile:\s*Dockerfile\.app/);
   assert.match(workflow, /name:\s*runner[\s\S]*dockerfile:\s*Dockerfile\b/);
   assert.match(workflow, /linux\/amd64,linux\/arm64/);
+  assert.match(workflow, /verify:/);
+  assert.match(workflow, /npm test/);
+  assert.match(workflow, /smoke-app-image\.mjs/);
+  assert.match(workflow, /chmod 0777 \.ci-data/);
+  assert.match(workflow, /needs:\s*verify/);
 });
 
 test("prebuilt compose pulls the full-language app image without local build", () => {

@@ -48,6 +48,8 @@ http://127.0.0.1:43117
 
 这条路径会创建 Docker 镜像、容器和 Compose 网络，但不会修改用户 Docker Desktop 的全局配置，也不会往宿主机安装 Java/C++/Python。
 
+若部署配置使用 `./data:/app/data` bind mount，宿主机上的 `./data` 必须允许容器写入。生产配置同时使用 `cap_drop: [ALL]` 时，即使容器进程 UID 为 0，也不能依赖 `DAC_OVERRIDE` 绕过宿主机目录权限。部署前应由 Docker 创建该目录，或显式设置适合当前 NAS 用户/ACL 的读写权限；不要把权限错误误判为推荐题库或应用启动失败。
+
 如果要从当前源码本地构建应用镜像，再运行：
 
 ```bash
@@ -97,7 +99,9 @@ export ACMCODER_DOCKER_IMAGE=ghcr.io/pygmalion03/acmcoder-runner:latest
 - `acmcoder-app`
 - `acmcoder-runner`
 
-它支持手动触发，也会在推送 `v*` tag 时发布带版本 tag 的镜像，并给版本发布产物补 `latest`。`docker-compose.prebuilt.yml` 指向预构建 `app` 镜像，避免零环境用户先在本地 build。
+发布前必须先通过单元测试，并以只读根文件系统、2 CPU、2 GB 内存、256 PID 和无额外 Linux capability 的配置启动真实 app 镜像。冒烟测试会验证空数据卷仍能加载内置推荐题库，并实际编译运行 Java、C++ 和 Python。只有验证任务通过，发布任务才会构建并推送多架构镜像。
+
+工作流支持手动触发，也会在推送 `v*` tag 时发布带版本 tag 的镜像，并给版本发布产物补 `latest`。`docker-compose.prebuilt.yml` 指向预构建 `app` 镜像，避免零环境用户先在本地 build。
 
 ## Release、源码和 Package 的关系
 
@@ -110,7 +114,7 @@ ghcr.io/pygmalion03/acmcoder-runner:latest
 
 Release 的作用是给用户一个清晰的版本页，说明这个版本对应哪个 tag、有哪些镜像、怎么启动。源码 ZIP/TAR 也会挂在 Release 下面，但普通 Docker 用户仍然建议使用仓库里的 `docker-compose.prebuilt.yml` 或最新源码目录，而不是把 Release 当成安装器。
 
-源码分支可以先于正式 Release 更新。默认 Compose 文件使用 `ghcr.io/pygmalion03/acmcoder-app:latest`；如果需要固定版本，再使用 Release 对应的 tag，例如 `ghcr.io/pygmalion03/acmcoder-app:v3.0.1`。
+源码分支可以先于正式 Release 更新。默认 Compose 文件使用 `ghcr.io/pygmalion03/acmcoder-app:latest`；如果需要固定版本，再使用 Release 对应的 tag，例如 `ghcr.io/pygmalion03/acmcoder-app:v3.0.2`。
 
 ## 环境扫描
 

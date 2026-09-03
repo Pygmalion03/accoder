@@ -15,6 +15,10 @@ export function getDefaultRecommendationCatalogFile() {
   return defaultRecommendationCatalogFile;
 }
 
+export function getBundledRecommendationCatalogFile(env = process.env) {
+  return String(env?.ACMCODER_BUNDLED_RECOMMENDATION_CATALOG_FILE || "").trim() || bundledRecommendationCatalogFile;
+}
+
 function firstValue(...values) {
   for (const value of values) {
     const normalized = String(value ?? "").trim();
@@ -149,7 +153,7 @@ async function readCatalogFile(catalogFile) {
 export async function loadRecommendationCatalog(
   catalogFile = defaultRecommendationCatalogFile,
   fallbackCatalogFile = path.resolve(catalogFile) === path.resolve(defaultRecommendationCatalogFile)
-    ? bundledRecommendationCatalogFile
+    ? getBundledRecommendationCatalogFile()
     : "",
 ) {
   try {

@@ -20,8 +20,12 @@ RUN npm install --omit=dev --ignore-scripts
 
 COPY . .
 
+RUN mkdir -p /app/bundled-data/recommendation \
+  && cp /app/data/recommendation/default-catalog.json /app/bundled-data/recommendation/default-catalog.json
+
 ENV ACMCODER_HOST=0.0.0.0
 ENV ACMCODER_DEPLOYMENT_MODE=docker-app
+ENV ACMCODER_BUNDLED_RECOMMENDATION_CATALOG_FILE=/app/bundled-data/recommendation/default-catalog.json
 ENV PORT=43117
 
 EXPOSE 43117
